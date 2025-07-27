@@ -2,7 +2,8 @@
 import json
 import warnings
 from json import JSONDecoder, JSONDecodeError
-from typing import Any
+from typing import Any, List
+
 
 # ════════════════════════════════════════════════════════════════════
 # String Format helper
@@ -44,3 +45,7 @@ def get_first_json(s: str) -> Any:
         except JSONDecodeError:
             # Not a valid object starting here; move one character forward
             idx = start + 1
+
+def combine_list2str(items: List[str]) -> str:
+    """Combine a list of strings into one long string."""
+    return "".join(items)

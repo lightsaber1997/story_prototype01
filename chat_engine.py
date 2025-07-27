@@ -80,7 +80,7 @@ class ChatWorker(QObject):
             raw_next_line = self.engine.generate_reply(continue_prompt, max_new_tokens=120).strip()
             print(f"raw_next_line: {raw_next_line}")
 
-            json_checked_output = format.get_first_json(raw_next_line)
+            json_checked_output = format_helper.get_first_json(raw_next_line)
             next_line = json_checked_output["first"] + json_checked_output["second"]
 
             self.story.append(next_line)
