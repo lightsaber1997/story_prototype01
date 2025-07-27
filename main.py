@@ -148,11 +148,12 @@ class MainApp(QMainWindow):
 
         # print every 2nd message in a page
         segments = self.story_pages_list[self.current_page_idx]
-
-        if segments is not None and (len(segments) == 2):
-            prompt_for_image = segments[2]
+        select_idx = 1
+        if segments is not None and (len(segments) == select_idx + 1):
+            prompt_for_image = segments[select_idx]
             prompt_for_image = format_helper.first_sentence(prompt_for_image)
             prompt_for_image += " children's picture book"
+            print(prompt_for_image)
             self.image_gen_controller.operate.emit(prompt_for_image)
 
         

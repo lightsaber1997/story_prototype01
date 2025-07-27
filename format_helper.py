@@ -4,6 +4,7 @@ import warnings
 from json import JSONDecoder, JSONDecodeError
 from typing import Any, List, Sequence
 
+import re
 
 # ════════════════════════════════════════════════════════════════════
 # String Format helper
