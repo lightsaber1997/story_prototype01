@@ -1,3 +1,5 @@
+import format_helper
+
 # ── LLM Engine (new) ────────────────────────────────────────────────
 class Phi3MiniEngine:
     """Owns the tokenizer/model and exposes generate_reply()."""
