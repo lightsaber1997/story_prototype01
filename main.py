@@ -68,6 +68,8 @@ class MainApp(QMainWindow):
             
         item = QListWidgetItem(f"사용자: {user_input}")
         item.setTextAlignment(Qt.AlignmentFlag.AlignLeft)
+        # 줄바꿈을 위한 플래그 설정
+        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
         self.ui.chatList.addItem(item)
 
         print(f"user_input: {user_input}")
@@ -81,15 +83,21 @@ class MainApp(QMainWindow):
         text = payload["text"]
 
         if kind == "story_line":
-            self.ui.chatList.addItem(f"AI (fixed): {text}")
+            item = QListWidgetItem(f"AI (fixed): {text}")
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
+            self.ui.chatList.addItem(item)
             self._append_to_story(text + " ")
 
         elif kind == "ai_suggestion":
-            self.ui.chatList.addItem(f"AI: {text}")
+            item = QListWidgetItem(f"AI: {text}")
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
+            self.ui.chatList.addItem(item)
             self._append_to_story(text + " ")
 
         elif kind == "chat_answer":
-            self.ui.chatList.addItem(f"AI: {text}")
+            item = QListWidgetItem(f"AI: {text}")
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
+            self.ui.chatList.addItem(item)
             # self.chat_list.addItem()
 
         self.update_story_display()
@@ -148,6 +156,7 @@ class MainApp(QMainWindow):
             
         item = QListWidgetItem(f"사용자: {user_input}")
         item.setTextAlignment(Qt.AlignmentFlag.AlignLeft)
+        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
         self.ui.chatList.addItem(item)
         
         # AI 응답 (실제로는 AI 모델 호출 예정)
@@ -156,6 +165,7 @@ class MainApp(QMainWindow):
         ai_response = f"AI가 '{user_input}'을 바탕으로 스토리를 계속 만들어갑니다..."
         ai_item = QListWidgetItem(f"AI: {ai_response}")
         ai_item.setTextAlignment(Qt.AlignmentFlag.AlignRight)
+        ai_item.setFlags(ai_item.flags() | Qt.ItemFlag.ItemIsEnabled)
         self.ui.chatList.addItem(ai_item)
         
         self.story_pages[self.current_page - 1] += f" {user_input}"
@@ -260,6 +270,8 @@ class MainApp(QMainWindow):
                 segments_combined = format_helper.combine_list2str(list_segment)
                 item = QListWidgetItem(segments_combined)
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                # 줄바꿈 추가
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
                 self.ui.chatList_2.addItem(item)
         
 
