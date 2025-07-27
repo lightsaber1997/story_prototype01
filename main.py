@@ -29,7 +29,7 @@ class MainApp(QMainWindow):
         self.ui.setupUi(self)
         
         # 현재 페이지 (임시)
-        self.current_page = 1
+        self.current_page_idx = 0
         self.total_pages = 3
         self.story_pages = ["Once upon a time...", "", ""]  # 각 페이지의 스토리
         
@@ -91,7 +91,9 @@ class MainApp(QMainWindow):
         elif kind == "chat_answer":
             self.ui.chatList.addItem(f"AI: {text}")
             # self.chat_list.addItem()
-
+        
+        self.current_page_idx = len(self.story_pages_list) - 1
+        self.update_page_display()
         self.update_story_display()
         self.ui.textEdit_childStory.clear()
         self.ui.chatList.scrollToBottom()
@@ -169,23 +171,23 @@ class MainApp(QMainWindow):
         
     def previous_page(self, event):
         """이전 페이지로 이동"""
-        if self.current_page > 1:
-            self.current_page -= 1
+        if self.current_page_idx > 0:
+            self.current_page_idx -= 1
             self.update_page_display()
-            self.update_story_display()
+            self.update_story_display(self.current_page_idx)
             
     def next_page(self, event):
         """다음 페이지로 이동"""
-        if self.current_page < self.total_pages:
-            self.current_page += 1
+        if self.current_page_idx < self.total_pages - 1:
+            self.current_page_idx += 1
             self.update_page_display()
-            self.update_story_display()
+            self.update_story_display(self.current_page_idx)
             
     def update_page_display(self):
         """페이지 표시 업데이트"""
-        self.ui.label_page.setText(f"{self.current_page}/{self.total_pages}")
+        self.ui.label_page.setText(f"{self.current_page_idx+1}/{self.total_pages}")
     
-        if self.current_page == 1:
+        if self.current_page_idx == 0:
             self.ui.label_page_prev.setStyleSheet("""
                 QLabel {
                     color: #666666;
@@ -212,7 +214,7 @@ class MainApp(QMainWindow):
                 }
             """)
             
-        if self.current_page == self.total_pages:
+        if self.current_page_idx == (self.total_pages - 1):
             self.ui.label_page_next.setStyleSheet("""
                 QLabel {
                     color: #666666;
@@ -250,7 +252,7 @@ class MainApp(QMainWindow):
     #         self.ui.chatList_2.addItem(item)
 
     
-    def update_story_display(self):
+    def update_story_display(self, page_idx=None):
         """현재 페이지의 스토리 표시 업데이트"""
         # self.story_pages: ["adsfdfdsfa", "dfadfasdfa", "dfadfadf"]
         # self.story_pages_list = [
@@ -260,13 +262,16 @@ class MainApp(QMainWindow):
         #     ["asdfadsfadsf", "Adfadfadf", "afdafadf", "dfadfadf"],
         #     ["asdfadsfadsf", "Adfadfadf", "afdafadf", "dfadfadf"]
         # ]
-        
+        if page_idx is None:
+
+            page_idx = len(self.story_pages_list) - 1
+            
         self.ui.chatList_2.clear()
 
-        last_index = len(self.story_pages_list) - 1
         
-        if last_index >= 0:
-            list_segment = self.story_pages_list[last_index]
+        
+        if page_idx >= 0 and page_idx < len(self.story_pages_list):
+            list_segment = self.story_pages_list[page_idx]
             if len(list_segment) > 0:
                 for seg in list_segment:                   # already at most 4
                     item = QListWidgetItem(seg)
