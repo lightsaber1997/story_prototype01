@@ -31,7 +31,7 @@
 ---
 
 ## 팀 구성원
-| 이름 | 이메일 | 퀄컴 이메일 |
+| 이름 | 이메일 | 퀄컴 ID |
 |:---  |---  |---  |
 | 도규엽 | bestornot04@naver.com | bestornot04@naver.com |
 | 도연수 |shnystar1129@ewhain.net | shnystar1129@ewhain.net |
