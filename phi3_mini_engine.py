@@ -1,4 +1,7 @@
-import format_helper
+# ── Transformers / Torch
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
 
 # ── LLM Engine (new) ────────────────────────────────────────────────
 class Phi3MiniEngine:

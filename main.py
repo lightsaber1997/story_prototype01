@@ -11,6 +11,10 @@ from main_ui_colorful import Ui_StoryMakerMainWindow
 from phi3_mini_engine import Phi3MiniEngine
 from chat_engine import *
 
+# ── Transformers / Torch
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
 # ex) ai_module.py 파일의 ask_ai 메서드라고 가정 
 # from ai_module import ask_ai
 
@@ -36,7 +40,7 @@ class MainApp(QMainWindow):
         # initialization for llm engine
         self.llm_engline = Phi3MiniEngine()
         self.story_parts: List[str] = []
-        self.controller = ChatController(self._on_chat_reply, self.llm_engline)
+        self.chat_controller = ChatController(self._on_chat_reply, self.llm_engline)
 
 
     def connect_signals(self):
@@ -63,6 +67,8 @@ class MainApp(QMainWindow):
         print(f"user_input: {user_input}")
         print(type(user_input))
 
+        self.chat_controller.operate.emit(user_input)
+
 
     def _on_chat_reply(self, payload: Dict[str, str]) -> None:
         kind = payload["type"]
@@ -77,7 +83,8 @@ class MainApp(QMainWindow):
             self._append_to_story(text + " ")
 
         elif kind == "chat_answer":
-            self.chat_list.addItem(f"AI: {text}")
+            self.ui.chatList.addItem(f"AI: {text}")
+            # self.chat_list.addItem()
 
     # ------------- Helpers ---------------------------------------------------
     def _append_to_story(self, segment: str) -> None:
