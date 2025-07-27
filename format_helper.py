@@ -2,7 +2,7 @@
 import json
 import warnings
 from json import JSONDecoder, JSONDecodeError
-from typing import Any, List
+from typing import Any, List, Sequence
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -49,3 +49,30 @@ def get_first_json(s: str) -> Any:
 def combine_list2str(items: List[str]) -> str:
     """Combine a list of strings into one long string."""
     return "".join(items)
+
+
+
+
+def first_sentence(text: str, *, eos: Sequence[str] = (".", "?", "!")) -> str:
+    """
+    Return the first sentence in *text*.
+
+    Parameters
+    ----------
+    text : str
+        The input string.
+    eos : sequence of str, optional
+        Characters that mark sentence endings.  Default: ('.', '?', '!')
+        Pass a different set to customize—e.g. eos=("。",) for Japanese.
+    """
+    if not text:
+        return ""
+
+    # Escape each terminator for regex and join into a character class
+    eos_class = "[" + re.escape("".join(eos)) + "]"
+
+    # Non‑greedy up to the first terminator followed by space or end‑of‑string
+    pattern = rf"(.+?{eos_class})(?:\s|$)"
+    match = re.search(pattern, text.strip(), re.DOTALL)
+
+    return match.group(1).strip() if match else text.strip()

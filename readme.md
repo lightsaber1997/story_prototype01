@@ -10,5 +10,7 @@ accelerate        : 1.9.0
 PySide6 binding   : 6.9.1
 Qt runtime        : 6.9.1
 
+diffusers
+
 
 
