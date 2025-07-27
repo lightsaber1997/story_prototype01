@@ -1,8 +1,16 @@
-import sys
+# ── stdlib
+import sys, re, json, textwrap, random, string, collections
+from pathlib import Path
+from typing import Dict, List
+
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QListWidgetItem
 from PySide6.QtCore import Qt
 from main_ui_colorful import Ui_StoryMakerMainWindow
+
+
 from phi3_mini_engine import Phi3MiniEngine
+from chat_engine import *
+
 # ex) ai_module.py 파일의 ask_ai 메서드라고 가정 
 # from ai_module import ask_ai
 
@@ -28,8 +36,9 @@ class MainApp(QMainWindow):
         # initialization for llm engine
         self.llm_engline = Phi3MiniEngine()
         self.story_parts: List[str] = []
-        self.controller = ChatController(self._on_ai_reply)
-        
+        self.controller = ChatController(self._on_chat_reply, self.llm_engline)
+
+
     def connect_signals(self):
         """버튼과 이벤트를 연결"""
 
@@ -53,6 +62,29 @@ class MainApp(QMainWindow):
 
         print(f"user_input: {user_input}")
         print(type(user_input))
+
+
+    def _on_chat_reply(self, payload: Dict[str, str]) -> None:
+        kind = payload["type"]
+        text = payload["text"]
+
+        if kind == "story_line":
+            self.chat_list.addItem(f"AI (fixed): {text}")
+            self._append_to_story(text + " ")
+
+        elif kind == "ai_suggestion":
+            self.chat_list.addItem(f"AI: {text}")
+            self._append_to_story(text + " ")
+
+        elif kind == "chat_answer":
+            self.chat_list.addItem(f"AI: {text}")
+
+    # ------------- Helpers ---------------------------------------------------
+    def _append_to_story(self, segment: str) -> None:
+        self.story_parts.append(segment)
+        self.story_view.setPlainText("".join(self.story_parts))
+
+        print(self.story_parts)
     
 
 
