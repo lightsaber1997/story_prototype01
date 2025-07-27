@@ -5,6 +5,9 @@ from typing import Dict, List
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QListWidgetItem
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
+
+
 from main_ui_colorful import Ui_StoryMakerMainWindow
 # ── Transformers / Torch
 import torch
@@ -90,6 +93,10 @@ class MainApp(QMainWindow):
             QMessageBox.critical(self, "Image Error", f"Failed to generate image:\n{payload['error']}")
 
 
+        
+        self._display_image_on_label(save_path)
+
+
     def _on_chat_send(self) -> None:
         user_input = self.ui.textEdit_childStory.toPlainText().strip()
         
@@ -105,6 +112,8 @@ class MainApp(QMainWindow):
 
         print(f"user_input: {user_input}")
         print(type(user_input))
+        
+        self.ui.textEdit_childStory.clear()
 
         self.chat_controller.operate.emit(user_input)
 
@@ -137,8 +146,50 @@ class MainApp(QMainWindow):
         self.ui.textEdit_childStory.clear()
         self.ui.chatList.scrollToBottom()
 
-        prompt_for_image = "prince and dragon in fairy_tale_story"
-        self.image_gen_controller.operate.emit(prompt_for_image)
+        # print every 2nd message in a page
+        segments = self.story_pages_list[self.current_page_idx]
+
+        if segments is not None and (len(segments) == 2):
+            prompt_for_image = segments[2]
+            prompt_for_image = format_helper.first_sentence(prompt_for_image)
+            prompt_for_image += " children's picture book"
+            self.image_gen_controller.operate.emit(prompt_for_image)
+
+        
+
+    def _display_image_on_label(self, image_path: str) -> None:
+        try:
+            if Path(image_path).exists():
+                pixmap = QPixmap(image_path)
+
+                if not pixmap.isNull():
+                    # label 크기에 맞게 이미지 스케일링 (비율 유지)
+                    scaled_pixmap = pixmap.scaled(
+                        self.ui.label_generatedImage.size(),
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    
+                    self.ui.label_generatedImage.setPixmap(scaled_pixmap)
+                    self.ui.label_generatedImage.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    print(f"이미지 표시 완료: {image_path}")
+                else:
+                    print(f"이미지 로드 실패: {image_path}")
+                    self._show_placeholder_text()
+            else:
+                print(f"이미지 파일이 존재하지 않음: {image_path}")
+                # 더미 이미지의 경우 기본 배경 이미지나 플레이스홀더 표시
+                self._show_placeholder_image()
+                
+        except Exception as e:
+            print(f"이미지 표시 중 오류 발생: {e}")
+            self._show_placeholder_text()
+    
+    def _show_placeholder_text(self) -> None:
+        """플레이스홀더 텍스트를 표시합니다."""
+        self.ui.label_generatedImage.clear()
+        self.ui.label_generatedImage.setText("🎨 Generated image will appear here")
+        self.ui.label_generatedImage.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
 
     # ------------- Helpers ---------------------------------------------------
