@@ -16,6 +16,8 @@ from phi3_mini_engine import Phi3MiniEngine
 from chat_engine import *
 import format_helper
 
+from stable_engine import StableV15Engine
+from image_gen_engine import *
 
 
 
@@ -48,6 +50,15 @@ class MainApp(QMainWindow):
         self.story_parts: List[str] = []
         self.chat_controller = ChatController(self._on_chat_reply, self.llm_engline)
 
+        # For image generation
+        self.image_gen_engine = StableV15Engine()
+        self.image_gen_controller = ImageGenController(
+            self._on_image_gen_ready, 
+            self.image_engine)
+
+        # 각 페이지별 생성된 이미지 저장
+        self.page_images: Dict[int, str] = {}  # {page_index: image_path}
+
 
     def connect_signals(self):
         """버튼과 이벤트를 연결"""
@@ -58,6 +69,26 @@ class MainApp(QMainWindow):
         # 페이지 네비게이션
         self.ui.label_page_prev.mousePressEvent = self.previous_page
         self.ui.label_page_next.mousePressEvent = self.next_page
+    
+    def _on_image_ready(self, payload: dict):
+        if payload["type"] == "image_generated":
+            image = payload["image"]
+            prompt = payload["prompt"]
+
+            # Optional: Save or display
+            page_idx = self.current_page_idx
+            save_path = f"images/page_{page_idx + 1}.png"
+            StableV15Engine.save_image(image, save_path)
+            self.page_images[page_idx] = save_path
+
+            print(f"[Image] Saved to {save_path} from prompt: {prompt}")
+
+            # Optional: show in UI (e.g., QLabel pixmap)
+            # self.ui.imageLabel.setPixmap(QPixmap(save_path))
+
+        elif payload["type"] == "error":
+            QMessageBox.critical(self, "Image Error", f"Failed to generate image:\n{payload['error']}")
+
 
     def _on_chat_send(self) -> None:
         user_input = self.ui.textEdit_childStory.toPlainText().strip()
