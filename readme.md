@@ -34,7 +34,7 @@
 | 이름 | 이메일 | 퀄컴 이메일 |
 |:---  |---  |---  |
 | 도규엽 | bestornot04@naver.com | bestornot04@naver.com |
-| 도규엽 |shnystar1129@ewhain.net | shnystar1129@ewhain.net |
+| 도연수 |shnystar1129@ewhain.net | shnystar1129@ewhain.net |
 | 백승우 | tmddn7675@gmail.com | tmddn7675@gmail.com |
 | 이서현 | leeseohyun@ewhain.net | leeseohyun@ewhain.net |
 | 최윤진 | cyy000123@gmail.com | cyy000123@gmail.com |
