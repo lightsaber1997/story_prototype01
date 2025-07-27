@@ -54,7 +54,7 @@ class MainApp(QMainWindow):
         self.image_gen_engine = StableV15Engine()
         self.image_gen_controller = ImageGenController(
             self._on_image_gen_ready, 
-            self.image_engine)
+            self.image_gen_engine)
 
         # 각 페이지별 생성된 이미지 저장
         self.page_images: Dict[int, str] = {}  # {page_index: image_path}
@@ -70,7 +70,7 @@ class MainApp(QMainWindow):
         self.ui.label_page_prev.mousePressEvent = self.previous_page
         self.ui.label_page_next.mousePressEvent = self.next_page
     
-    def _on_image_ready(self, payload: dict):
+    def _on_image_gen_ready(self, payload: dict):
         if payload["type"] == "image_generated":
             image = payload["image"]
             prompt = payload["prompt"]
@@ -136,7 +136,9 @@ class MainApp(QMainWindow):
         self.update_story_display()
         self.ui.textEdit_childStory.clear()
         self.ui.chatList.scrollToBottom()
-    
+
+        prompt_for_image = "prince and dragon in fairy_tale_story"
+        self.image_gen_controller.operate.emit(prompt_for_image)
 
 
     # ------------- Helpers ---------------------------------------------------
