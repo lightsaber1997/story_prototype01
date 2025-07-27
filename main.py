@@ -5,6 +5,7 @@ from typing import Dict, List
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QListWidgetItem
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
 from main_ui_colorful import Ui_StoryMakerMainWindow
 # ── Transformers / Torch
 import torch
@@ -48,6 +49,7 @@ class MainApp(QMainWindow):
         
         # initial state
         self.update_page_display()
+        self._show_placeholder_text()
         
         # 버튼 연결 해야 할 부분
         # initialization for llm engine
@@ -123,6 +125,7 @@ class MainApp(QMainWindow):
         self.current_page_idx = len(self.story_pages_list) - 1
         self.update_page_display()
         self.update_story_display()
+        self._update_current_page_image()
         self.ui.textEdit_childStory.clear()
         self.ui.chatList.scrollToBottom()
     
@@ -189,7 +192,7 @@ class MainApp(QMainWindow):
         print(f"debuhging: 전달할 문장들: {page_segments}")
         
         # 실제 이미지 생성 AI 모듈과 연결
-        # 아래 주석 풀고 199~201번 주석처리 하면 됩니다. print문들은 디버깅용이라 지워도 무방.
+        # 아래 주석 풀고 임시 더미 이미지 부분(209~211)을 주석처리 하면 됩니다. print문은 디버깅용이라 지워도 무방
         # 예시:
         # try:
         #     image_path = self.image_ai.generate_image(page_segments)
@@ -200,16 +203,93 @@ class MainApp(QMainWindow):
         #     self._update_page_image_display(page_index, image_path)
         # except Exception as e:
         #     print(f"이미지 생성 실패: {e}")
+        #     self._show_placeholder_text()
         
         # 임시: 더미 이미지 경로 저장
         dummy_image_path = f"assets/generated/page_{page_index + 1}.png"
         self.page_images[page_index] = dummy_image_path
         print(f"[임시] 이미지 경로 저장: {dummy_image_path}")
+        
+        # UI 업데이트 (이미지 표시)
+        self._update_page_image_display(page_index, dummy_image_path)
     
     def _update_page_image_display(self, page_index: int, image_path: str) -> None:
-
+        """
+        생성된 이미지를 UI에 표시합니다.
+        
+        Args:
+            page_index: 페이지 인덱스
+            image_path: 생성된 이미지 파일 경로
+        """
+        # 현재 페이지가 해당 페이지인 경우 즉시 표시
         if self.current_page_idx == page_index:
             print(f"현재 페이지 이미지 업데이트: {image_path}")
+            self._display_image_on_label(image_path)
+    
+    def _display_image_on_label(self, image_path: str) -> None:
+        try:
+            if Path(image_path).exists():
+                pixmap = QPixmap(image_path)
+
+                if not pixmap.isNull():
+                    # label 크기에 맞게 이미지 스케일링 (비율 유지)
+                    scaled_pixmap = pixmap.scaled(
+                        self.ui.label_generatedImage.size(),
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    
+                    self.ui.label_generatedImage.setPixmap(scaled_pixmap)
+                    self.ui.label_generatedImage.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    print(f"이미지 표시 완료: {image_path}")
+                else:
+                    print(f"이미지 로드 실패: {image_path}")
+                    self._show_placeholder_text()
+            else:
+                print(f"이미지 파일이 존재하지 않음: {image_path}")
+                # 더미 이미지의 경우 기본 배경 이미지나 플레이스홀더 표시
+                self._show_placeholder_image()
+                
+        except Exception as e:
+            print(f"이미지 표시 중 오류 발생: {e}")
+            self._show_placeholder_text()
+    
+    def _show_placeholder_text(self) -> None:
+        """플레이스홀더 텍스트를 표시합니다."""
+        self.ui.label_generatedImage.clear()
+        self.ui.label_generatedImage.setText("🎨 Generated image will appear here")
+        self.ui.label_generatedImage.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    
+    def _show_placeholder_image(self) -> None:
+        """더미 이미지나 기본 이미지를 표시합니다."""
+        # 기본 배경 이미지가 있다면 사용
+        default_image_path = "assets/image/background.png"
+        if Path(default_image_path).exists():
+            try:
+                pixmap = QPixmap(default_image_path)
+                if not pixmap.isNull():
+                    # 반투명하게 만들어서 플레이스홀더임을 표시
+                    scaled_pixmap = pixmap.scaled(
+                        self.ui.label_generatedImage.size(),
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    self.ui.label_generatedImage.setPixmap(scaled_pixmap)
+                    self.ui.label_generatedImage.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    return
+            except Exception as e:
+                print(f"기본 이미지 로드 실패: {e}")
+        
+        # 기본 이미지도 없으면 텍스트 표시
+        self._show_placeholder_text()
+    
+    def _update_current_page_image(self) -> None:
+        """현재 페이지의 이미지를 업데이트합니다."""
+        current_image_path = self.get_page_image(self.current_page_idx)
+        if current_image_path:
+            self._display_image_on_label(current_image_path)
+        else:
+            self._show_placeholder_text()
     
     def get_page_image(self, page_index: int) -> str:
         return self.page_images.get(page_index, "")
@@ -259,6 +339,7 @@ class MainApp(QMainWindow):
             self.current_page_idx -= 1
             self.update_page_display()
             self.update_story_display(self.current_page_idx)
+            self._update_current_page_image()
             
     def next_page(self, event):
         """다음 페이지로 이동"""
@@ -267,6 +348,7 @@ class MainApp(QMainWindow):
             self.current_page_idx += 1
             self.update_page_display()
             self.update_story_display(self.current_page_idx)
+            self._update_current_page_image()
             
     def update_page_display(self):
         """페이지 표시 업데이트"""
