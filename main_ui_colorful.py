@@ -1,12 +1,23 @@
 # -*- coding: utf-8 -*-
 
 from PySide6.QtCore import (QCoreApplication, QMetaObject, Qt)
-from PySide6.QtGui import (QBrush, QColor, QCursor, QFont, QPalette)
+from PySide6.QtGui import (QBrush, QColor, QCursor, QFont, QPalette, QPixmap)
 from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
     QListWidget, QListWidgetItem, QMainWindow, QPushButton,
     QSizePolicy, QTextEdit, QVBoxLayout, QWidget)
 
 class Ui_StoryMakerMainWindow(object):
+    def _get_relative_font_size(self, base_size):
+        """DPI에 따른 상대적 폰트 크기 계산"""
+        from PySide6.QtWidgets import QApplication
+        # 시스템 DPI 스케일링 팩터 가져오기
+        app = QApplication.instance()
+        if app:
+            screen = app.primaryScreen()
+            dpi_ratio = screen.logicalDotsPerInch() / 96.0  # 96 DPI가 기본
+            return max(8, int(base_size * min(dpi_ratio, 1.5)))  # 최대 1.5배까지만 확대
+        return base_size
+    
     def setupUi(self, StoryMakerMainWindow):
         if not StoryMakerMainWindow.objectName():
             StoryMakerMainWindow.setObjectName(u"StoryMakerMainWindow")
@@ -24,14 +35,23 @@ class Ui_StoryMakerMainWindow(object):
         
         self.centralwidget = QWidget(StoryMakerMainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        self.centralwidget.setStyleSheet("""
-            QWidget#centralwidget {
-                background-image: url('assets/image/background.png');
-                background-repeat: repeat;
-                background-size: 100px 100px;
-                background-position: 0 0;
-            }
-        """)
+        # 배경 이미지를 타일링으로 설정
+        try:
+            background_pixmap = QPixmap('assets/image/background.png')
+            if not background_pixmap.isNull():
+                # 배경색 설정
+                palette = QPalette()
+                brush = QBrush(background_pixmap)
+                brush.setStyle(Qt.BrushStyle.TexturePattern)
+                palette.setBrush(QPalette.ColorRole.Window, brush)
+                self.centralwidget.setPalette(palette)
+                self.centralwidget.setAutoFillBackground(True)
+            else:
+                # 이미지 로드 실패 시 기본 색상
+                self.centralwidget.setStyleSheet("background-color: #55afef;")
+        except:
+            # 예외 발생 시 기본 색상
+            self.centralwidget.setStyleSheet("background-color: #55afef;")
         
         self.mainLayout = QHBoxLayout(self.centralwidget)
         self.mainLayout.setContentsMargins(20, 20, 20, 20)
@@ -62,7 +82,7 @@ class Ui_StoryMakerMainWindow(object):
         self.label_title.setObjectName(u"label_title")
         font_title = QFont()
         font_title.setFamilies([u"Pretendard"])
-        font_title.setPointSize(22)
+        font_title.setPointSize(self._get_relative_font_size(22))
         font_title.setBold(True)
         self.label_title.setFont(font_title)
         self.label_title.setStyleSheet("""
@@ -90,7 +110,7 @@ class Ui_StoryMakerMainWindow(object):
                 border-radius: 12px;
                 padding: 12px;
                 color: #333333;
-                font-size: 14px;
+                font-size: 0.9em;
             }
             QListWidget::item {
                 padding: 10px 12px;
@@ -120,7 +140,7 @@ class Ui_StoryMakerMainWindow(object):
                 border: 2px solid rgba(255, 255, 255, 0.4);
                 border-radius: 12px;
                 padding: 12px;
-                font-size: 14px;
+                font-size: 0.9em;
                 color: #333333;
             }
             QTextEdit:focus {
@@ -135,7 +155,7 @@ class Ui_StoryMakerMainWindow(object):
         self.btnContinueStory.setObjectName(u"btnContinueStory")
         font_btn = QFont()
         font_btn.setFamilies([u"Pretendard"])
-        font_btn.setPointSize(14)
+        font_btn.setPointSize(self._get_relative_font_size(16))
         font_btn.setBold(True)
         self.btnContinueStory.setFont(font_btn)
         self.btnContinueStory.setMinimumHeight(50)
@@ -190,7 +210,7 @@ class Ui_StoryMakerMainWindow(object):
         self.label_page_prev.setObjectName(u"label_page_prev")
         font_nav = QFont()
         font_nav.setFamilies([u"Pretendard"])
-        font_nav.setPointSize(18)
+        font_nav.setPointSize(self._get_relative_font_size(18))
         font_nav.setBold(True)
         self.label_page_prev.setFont(font_nav)
         self.label_page_prev.setStyleSheet("""
@@ -218,7 +238,7 @@ class Ui_StoryMakerMainWindow(object):
         self.label_page.setObjectName(u"label_page")
         font_page = QFont()
         font_page.setFamilies([u"Pretendard"])
-        font_page.setPointSize(14)
+        font_page.setPointSize(self._get_relative_font_size(16))
         font_page.setBold(True)
         self.label_page.setFont(font_page)
         self.label_page.setStyleSheet("""
@@ -270,7 +290,7 @@ class Ui_StoryMakerMainWindow(object):
         self.label_generatedImage.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         font_img = QFont()
         font_img.setFamilies([u"Pretendard"])
-        font_img.setPointSize(15)
+        font_img.setPointSize(self._get_relative_font_size(18))
         font_img.setBold(True)
         self.label_generatedImage.setFont(font_img)
         self.label_generatedImage.setStyleSheet("""
@@ -301,7 +321,7 @@ class Ui_StoryMakerMainWindow(object):
                 border-radius: 15px;
                 padding: 20px;
                 color: #ffffff;
-                font-size: 16px;
+                font-size: 1.0em;
                 font-weight: 500;
             }
             QListWidget::item {
@@ -319,7 +339,7 @@ class Ui_StoryMakerMainWindow(object):
         
         font_story = QFont()
         font_story.setFamilies([u"Pretendard"])
-        font_story.setPointSize(18)
+        font_story.setPointSize(self._get_relative_font_size(18))
         font_story.setBold(True)
         font_story.setItalic(True)
         item = QListWidgetItem(self.chatList_2)
@@ -335,7 +355,7 @@ class Ui_StoryMakerMainWindow(object):
         self.btnSaveStory.setMinimumHeight(60)
         font_save = QFont()
         font_save.setFamilies([u"Pretendard"])
-        font_save.setPointSize(16)
+        font_save.setPointSize(self._get_relative_font_size(18))
         font_save.setBold(True)
         self.btnSaveStory.setFont(font_save)
         self.btnSaveStory.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
