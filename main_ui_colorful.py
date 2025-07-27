@@ -35,7 +35,6 @@ class Ui_StoryMakerMainWindow(object):
         
         self.centralwidget = QWidget(StoryMakerMainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        # 배경 이미지를 타일링으로 설정
         try:
             background_pixmap = QPixmap('assets/image/background.png')
             if not background_pixmap.isNull():
@@ -47,10 +46,8 @@ class Ui_StoryMakerMainWindow(object):
                 self.centralwidget.setPalette(palette)
                 self.centralwidget.setAutoFillBackground(True)
             else:
-                # 이미지 로드 실패 시 기본 색상
                 self.centralwidget.setStyleSheet("background-color: #55afef;")
         except:
-            # 예외 발생 시 기본 색상
             self.centralwidget.setStyleSheet("background-color: #55afef;")
         
         self.mainLayout = QHBoxLayout(self.centralwidget)
@@ -103,6 +100,11 @@ class Ui_StoryMakerMainWindow(object):
         # 채팅
         self.chatList = QListWidget(self.leftFrame)
         self.chatList.setObjectName(u"chatList")
+        self.chatList.setWordWrap(True)  # 줄바꿈 활성화
+        font_chat = QFont()
+        font_chat.setFamilies([u"Pretendard"])
+        font_chat.setPointSize(self._get_relative_font_size(14))  # 폰트 크기 증가
+        self.chatList.setFont(font_chat)
         self.chatList.setStyleSheet("""
             QListWidget {
                 background: rgba(255, 255, 255, 0.8);
@@ -110,14 +112,15 @@ class Ui_StoryMakerMainWindow(object):
                 border-radius: 12px;
                 padding: 12px;
                 color: #333333;
-                font-size: 0.9em;
+                font-size: 14px;
             }
             QListWidget::item {
-                padding: 10px 12px;
-                margin: 3px 0px;
+                padding: 12px 15px;
+                margin: 4px 0px;
                 border-radius: 8px;
                 background: rgba(90, 119, 236, 0.1);
                 border: 1px solid rgba(90, 119, 236, 0.2);
+                line-height: 1.4;
             }
             QListWidget::item:hover {
                 background: rgba(90, 119, 236, 0.2);
@@ -133,15 +136,21 @@ class Ui_StoryMakerMainWindow(object):
         
         self.textEdit_childStory = QTextEdit(self.leftFrame)
         self.textEdit_childStory.setObjectName(u"textEdit_childStory")
-        self.textEdit_childStory.setMaximumHeight(100)
+        self.textEdit_childStory.setMaximumHeight(120)  # 높이 증가
+        self.textEdit_childStory.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)  # 줄바꿈 설정
+        font_input = QFont()
+        font_input.setFamilies([u"Pretendard"])
+        font_input.setPointSize(self._get_relative_font_size(14))  # 폰트 크기 증가
+        self.textEdit_childStory.setFont(font_input)
         self.textEdit_childStory.setStyleSheet("""
             QTextEdit {
                 background: rgba(255, 255, 255, 0.95);
                 border: 2px solid rgba(255, 255, 255, 0.4);
                 border-radius: 12px;
                 padding: 12px;
-                font-size: 0.9em;
+                font-size: 14px;
                 color: #333333;
+                line-height: 1.4;
             }
             QTextEdit:focus {
                 border: 2px solid rgba(255, 255, 255, 0.7);
@@ -312,6 +321,11 @@ class Ui_StoryMakerMainWindow(object):
         self.chatList_2 = QListWidget(self.rightFrame)
         self.chatList_2.setObjectName(u"chatList_2")
         self.chatList_2.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.chatList_2.setWordWrap(True)  
+        font_story_list = QFont()
+        font_story_list.setFamilies([u"Pretendard"])
+        font_story_list.setPointSize(self._get_relative_font_size(16))  # 폰트 크기 증가
+        self.chatList_2.setFont(font_story_list)
         self.chatList_2.setStyleSheet("""
             QListWidget {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -321,15 +335,16 @@ class Ui_StoryMakerMainWindow(object):
                 border-radius: 15px;
                 padding: 20px;
                 color: #ffffff;
-                font-size: 1.0em;
+                font-size: 16px;
                 font-weight: 500;
             }
             QListWidget::item {
-                padding: 15px 20px;
-                margin: 5px 0px;
+                padding: 18px 25px;
+                margin: 6px 0px;
                 border-radius: 10px;
                 background: rgba(255, 255, 255, 0.1);
                 border: 1px solid rgba(255, 255, 255, 0.2);
+                line-height: 1.5;
             }
             QListWidget::item:hover {
                 background: rgba(255, 255, 255, 0.2);
@@ -347,6 +362,7 @@ class Ui_StoryMakerMainWindow(object):
         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         item.setFont(font_story)
         item.setForeground(QBrush(QColor(255, 255, 255, 255)))
+        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
         
         self.rightLayout.addWidget(self.chatList_2)
         
