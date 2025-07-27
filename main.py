@@ -252,15 +252,26 @@ class MainApp(QMainWindow):
     
     def update_story_display(self):
         """현재 페이지의 스토리 표시 업데이트"""
+        # self.story_pages: ["adsfdfdsfa", "dfadfasdfa", "dfadfadf"]
+        # self.story_pages_list = [
+        #     ["asdfadsfadsf", "Adfadfadf", "afdafadf", "dfadfadf"],
+        #     ["asdfadsfadsf", "Adfadfadf", "afdafadf", "dfadfadf"]
+        #     ,
+        #     ["asdfadsfadsf", "Adfadfadf", "afdafadf", "dfadfadf"],
+        #     ["asdfadsfadsf", "Adfadfadf", "afdafadf", "dfadfadf"]
+        # ]
+        
+        self.ui.chatList_2.clear()
+
         last_index = len(self.story_pages_list) - 1
         
         if last_index >= 0:
             list_segment = self.story_pages_list[last_index]
             if len(list_segment) > 0:
-                segments_combined = format_helper.combine_list2str(list_segment)
-                item = QListWidgetItem(segments_combined)
-                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.ui.chatList_2.addItem(item)
+                for seg in list_segment:                   # already at most 4
+                    item = QListWidgetItem(seg)
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self.ui.chatList_2.addItem(item)
         
 
 if __name__ == "__main__":
