@@ -93,8 +93,8 @@ class MainApp(QMainWindow):
     # ------------- Helpers ---------------------------------------------------
     def _append_to_story(self, segment: str) -> None:
         self.story_parts.append(segment)
-        self.story_pages_list
-        print(self.story_parts)
+        self._add_to_story_pages_list(segment)
+        print(f"self.story_pages_list: {self.story_pages_list}")
     
     def _add_to_story_pages_list(self, segment: str, num_page_segment: int = 4) -> None:
         """
