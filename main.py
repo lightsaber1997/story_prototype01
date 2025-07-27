@@ -16,11 +16,21 @@ from phi3_mini_engine import Phi3MiniEngine
 from chat_engine import *
 import format_helper
 
-
-
-
 # ex) ai_module.py 파일의 ask_ai 메서드라고 가정 
 # from ai_module import ask_ai
+
+# 이미지 생성 AI 모듈 (추후 추가될 파일)
+# image_generation_ai.py 파일의 ImageGenerationAI 모듈(클래스)라고 가정
+# from image_generation_ai import ImageGenerationAI
+
+# 이미지 생성 AI 모듈 예시
+# class ImageGenerationAI:
+#    def generate_image(self, page_segments: List[str]) -> str:
+        # input: page_segments는 4개 문장의 리스트
+        # process: AI가 자체적으로 프롬프트 생성 및 이미지 생성
+        # output: 생성된 이미지 파일 경로 반환
+        # pass
+# 4개 문장이 완성될 때마다 자동으로 이미지 생성 요청됨
 
 class MainApp(QMainWindow):
     def __init__(self):
@@ -28,10 +38,9 @@ class MainApp(QMainWindow):
         self.ui = Ui_StoryMakerMainWindow()
         self.ui.setupUi(self)
         
-        # 현재 페이지 (임시)
+        # 현재 페이지 (동적으로 관리)
         self.current_page_idx = 0
-        self.total_pages = 3
-        self.story_pages = ["Once upon a time...", "", ""]  # 각 페이지의 스토리
+        self.story_pages = ["Once upon a time...", "", ""]  # 각 페이지의 스토리 (레거시)
         
         self.story_pages_list = [] # double list. each list inside include [user input, ai response, user input, ai response]
 
@@ -41,12 +50,23 @@ class MainApp(QMainWindow):
         self.update_page_display()
         
         # 버튼 연결 해야 할 부분
-
-
         # initialization for llm engine
         self.llm_engline = Phi3MiniEngine()
         self.story_parts: List[str] = []
         self.chat_controller = ChatController(self._on_chat_reply, self.llm_engline)
+        
+        # 이미지 생성 AI 엔진 초기화 (추후 추가될 부분)
+        # self.image_ai = ImageGenerationAI()
+        
+        # 각 페이지별 생성된 이미지 저장
+        self.page_images: Dict[int, str] = {}  # {page_index: image_path}
+
+    def closeEvent(self, event):
+        """애플리케이션 종료 시 스레드 정리"""
+        if hasattr(self, 'chat_controller'):
+            self.chat_controller.workerThread.quit()
+            self.chat_controller.workerThread.wait()
+        event.accept()
 
 
     def connect_signals(self):
@@ -68,7 +88,7 @@ class MainApp(QMainWindow):
             
         item = QListWidgetItem(f"사용자: {user_input}")
         item.setTextAlignment(Qt.AlignmentFlag.AlignLeft)
-        # 줄바꿈을 위한 플래그 설정
+        # 줄바꿈 추가
         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
         self.ui.chatList.addItem(item)
 
@@ -132,19 +152,73 @@ class MainApp(QMainWindow):
         last_index = len(self.story_pages_list) - 1
         current_page = self.story_pages_list[last_index]
 
-        # ▸ BUG FIX: compare the **length of the page** to the capacity,
-        #   not the page itself.  Originally `len(self.story_pages_list[last_index] == num_page_segment)`
-        #   evaluated the boolean first, then tried to take len() of True/False.
         if len(current_page) == num_page_segment:
-            # Current page is full → start a new page.
+            # Current page is full → request image generation for completed page
+            self._request_image_generation(last_index, current_page)
+            # Start a new page
             self.story_pages_list.append([segment])
         else:
-            # There is room → append to current page.
             current_page.append(segment)
+            
+            # Check if current page is now complete (4 segments)
+            if len(current_page) == num_page_segment:
+                self._request_image_generation(last_index, current_page)
 
+    def _request_image_generation(self, page_index: int, page_segments: List[str]) -> None:
+        """
+        페이지가 4개 문장으로 완성되었을 때 이미지 생성을 요청합니다.
+        
+        Args:
+            page_index: 페이지 인덱스
+            page_segments: 해당 페이지의 4개 문장 리스트
+        """
+        print(f"debugging: [이미지 생성 요청] 페이지 {page_index + 1}")
+        print(f"debugging: 문장들: {page_segments}")
+        
+        self._call_image_generation_ai(page_index, page_segments)
     
+    def _call_image_generation_ai(self, page_index: int, page_segments: List[str]) -> None:
+        """
+        이미지 생성 AI를 호출
+        
+        Args:
+            page_index: 페이지 인덱스
+            page_segments: 해당 페이지의 4개 문장 리스트
+        """
+        print(f"debugging: [이미지 생성 AI 호출] 페이지 {page_index + 1}")
+        print(f"debuhging: 전달할 문장들: {page_segments}")
+        
+        # 실제 이미지 생성 AI 모듈과 연결
+        # 아래 주석 풀고 199~201번 주석처리 하면 됩니다. print문들은 디버깅용이라 지워도 무방.
+        # 예시:
+        # try:
+        #     image_path = self.image_ai.generate_image(page_segments)
+        #     self.page_images[page_index] = image_path
+        #     print(f"이미지 생성 완료: {image_path}")
+        #     
+        #     # UI 업데이트 (이미지 표시)
+        #     self._update_page_image_display(page_index, image_path)
+        # except Exception as e:
+        #     print(f"이미지 생성 실패: {e}")
+        
+        # 임시: 더미 이미지 경로 저장
+        dummy_image_path = f"assets/generated/page_{page_index + 1}.png"
+        self.page_images[page_index] = dummy_image_path
+        print(f"[임시] 이미지 경로 저장: {dummy_image_path}")
     
+    def _update_page_image_display(self, page_index: int, image_path: str) -> None:
 
+        if self.current_page_idx == page_index:
+            print(f"현재 페이지 이미지 업데이트: {image_path}")
+    
+    def get_page_image(self, page_index: int) -> str:
+        return self.page_images.get(page_index, "")
+    
+    def set_image_generation_ai(self, image_ai):
+        self.image_ai = image_ai
+    
+    def get_all_page_images(self) -> Dict[int, str]:
+        return self.page_images.copy()
 
         
         # ai 에 메세지 보내기
@@ -188,14 +262,16 @@ class MainApp(QMainWindow):
             
     def next_page(self, event):
         """다음 페이지로 이동"""
-        if self.current_page_idx < self.total_pages - 1:
+        total_pages = max(len(self.story_pages_list), 1)
+        if self.current_page_idx < total_pages - 1:
             self.current_page_idx += 1
             self.update_page_display()
             self.update_story_display(self.current_page_idx)
             
     def update_page_display(self):
         """페이지 표시 업데이트"""
-        self.ui.label_page.setText(f"{self.current_page_idx+1}/{self.total_pages}")
+        total_pages = max(len(self.story_pages_list), 1)  # 최소 1페이지
+        self.ui.label_page.setText(f"{self.current_page_idx+1}/{total_pages}")
     
         if self.current_page_idx == 0:
             self.ui.label_page_prev.setStyleSheet("""
@@ -224,7 +300,8 @@ class MainApp(QMainWindow):
                 }
             """)
             
-        if self.current_page_idx == (self.total_pages - 1):
+        total_pages = max(len(self.story_pages_list), 1)
+        if self.current_page_idx == (total_pages - 1):
             self.ui.label_page_next.setStyleSheet("""
                 QLabel {
                     color: #666666;
