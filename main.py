@@ -6,14 +6,18 @@ from typing import Dict, List
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QListWidgetItem
 from PySide6.QtCore import Qt
 from main_ui_colorful import Ui_StoryMakerMainWindow
+# ── Transformers / Torch
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
 
 
 from phi3_mini_engine import Phi3MiniEngine
 from chat_engine import *
+import format_helper
 
-# ── Transformers / Torch
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+
+
 
 # ex) ai_module.py 파일의 ask_ai 메서드라고 가정 
 # from ai_module import ask_ai
@@ -87,6 +91,10 @@ class MainApp(QMainWindow):
         elif kind == "chat_answer":
             self.ui.chatList.addItem(f"AI: {text}")
             # self.chat_list.addItem()
+
+        self.update_story_display()
+        self.ui.textEdit_childStory.clear()
+        self.ui.chatList.scrollToBottom()
     
 
 
@@ -231,15 +239,29 @@ class MainApp(QMainWindow):
                 }
             """)
             
+    # def update_story_display(self):
+    #     """현재 페이지의 스토리 표시 업데이트"""
+    #     current_story = self.story_pages[self.current_page - 1]
+        
+    #     self.ui.chatList_2.clear()
+    #     if current_story:
+    #         item = QListWidgetItem(current_story)
+    #         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+    #         self.ui.chatList_2.addItem(item)
+
+    
     def update_story_display(self):
         """현재 페이지의 스토리 표시 업데이트"""
-        current_story = self.story_pages[self.current_page - 1]
+        last_index = len(self.story_pages_list) - 1
         
-        self.ui.chatList_2.clear()
-        if current_story:
-            item = QListWidgetItem(current_story)
-            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.ui.chatList_2.addItem(item)
+        if last_index >= 0:
+            list_segment = self.story_pages_list[last_index]
+            if len(list_segment) > 0:
+                segments_combined = format_helper.combine_list2str(list_segment)
+                item = QListWidgetItem(segments_combined)
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.ui.chatList_2.addItem(item)
+        
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
