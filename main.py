@@ -75,16 +75,18 @@ class MainApp(QMainWindow):
         text = payload["text"]
 
         if kind == "story_line":
-            self.chat_list.addItem(f"AI (fixed): {text}")
+            self.ui.chatList.addItem(f"AI (fixed): {text}")
             self._append_to_story(text + " ")
 
         elif kind == "ai_suggestion":
-            self.chat_list.addItem(f"AI: {text}")
+            self.ui.chatList.addItem(f"AI: {text}")
             self._append_to_story(text + " ")
 
         elif kind == "chat_answer":
             self.ui.chatList.addItem(f"AI: {text}")
             # self.chat_list.addItem()
+    
+
 
     # ------------- Helpers ---------------------------------------------------
     def _append_to_story(self, segment: str) -> None:
