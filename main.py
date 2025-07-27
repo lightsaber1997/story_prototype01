@@ -29,6 +29,8 @@ class MainApp(QMainWindow):
         self.total_pages = 3
         self.story_pages = ["Once upon a time...", "", ""]  # 각 페이지의 스토리
         
+        self.story_pages_list = [] # double list. each list inside include [user input, ai response, user input, ai response]
+
         self.connect_signals()
         
         # initial state
@@ -91,9 +93,38 @@ class MainApp(QMainWindow):
     # ------------- Helpers ---------------------------------------------------
     def _append_to_story(self, segment: str) -> None:
         self.story_parts.append(segment)
-        self.story_view.setPlainText("".join(self.story_parts))
-
+        self.story_pages_list
         print(self.story_parts)
+    
+    def _add_to_story_pages_list(self, segment: str, num_page_segment: int = 4) -> None:
+        """
+        Add a text *segment* to self.story_pages_list.
+
+        • self.story_pages_list is a list of “pages” (each page is a list of segments).
+        • Each page can hold at most *num_page_segment* segments.
+        • When the current (last) page is full, start a new page.
+        """
+
+        # If no pages exist yet, create the first one with this segment.
+        if not self.story_pages_list:
+            self.story_pages_list.append([segment])
+            return
+
+        # Work with the last (current) page.
+        last_index = len(self.story_pages_list) - 1
+        current_page = self.story_pages_list[last_index]
+
+        # ▸ BUG FIX: compare the **length of the page** to the capacity,
+        #   not the page itself.  Originally `len(self.story_pages_list[last_index] == num_page_segment)`
+        #   evaluated the boolean first, then tried to take len() of True/False.
+        if len(current_page) == num_page_segment:
+            # Current page is full → start a new page.
+            self.story_pages_list.append([segment])
+        else:
+            # There is room → append to current page.
+            current_page.append(segment)
+
+    
     
 
 
