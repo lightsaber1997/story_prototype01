@@ -2,6 +2,7 @@ import sys
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QListWidgetItem
 from PySide6.QtCore import Qt
 from main_ui_colorful import Ui_StoryMakerMainWindow
+from phi3_mini_engine import Phi3MiniEngine
 # ex) ai_module.py 파일의 ask_ai 메서드라고 가정 
 # from ai_module import ask_ai
 
@@ -22,6 +23,13 @@ class MainApp(QMainWindow):
         self.update_page_display()
         
         # 버튼 연결 해야 할 부분
+
+
+        # initialization for llm engine
+        self.llm_engline = Phi3MiniEngine()
+        self.story_parts: List[str] = []
+        self.controller = ChatController(self._on_ai_reply)
+        
     def connect_signals(self):
         """버튼과 이벤트를 연결"""
 
