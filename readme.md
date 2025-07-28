@@ -79,3 +79,25 @@ diffusers
     ```
     python main.py
     ```
+---
+
+## 오픈소스 라이선스
+
+본 프로젝트는 MIT 라이선스 하에 배포됩니다.
+또한, 본 프로젝트는 다음과 같은 세 번째 파티 오픈소스 구성요소 및 모델을 사용하고 있습니다.
+각 패키지 및 모델의 라이센스 상세 조건은 LICENSE 파일 또는 Hugging Face 모델 카드(Model Card)에서 확인하실 수 있습니다.
+
+#### 런타임 및 라이브러리
+- Python runtime: Python 3.12.11
+- torch v2.6.0+cu118: BSD‑3‑Clause License
+- torchaudio v2.6.0: BSD‑3‑Clause (PyTorch와 동일 라이선스)
+- torchvision v2.6.0: BSD‑3‑Clause
+- transformers v4.54.0: Apache License 2.0 (코드 레벨)  
+- accelerate v1.9.0: Apache License 2.0 (특허권 포함)
+- diffusers: Apache License
+- PySide6 v6.9.1: LGPL‑3.0‑only 또는 GPL‑3.0‑only 
+  ※ 상업적 배포 시 LGPL 조건 준수가 필요합니다.
+
+#### 사전학습 모델
+- Phi‑3‑mini‑128k‑instruct: MIT License
+- Stable Diffusion v1.5: CreativeML OpenRAIL‑M License
