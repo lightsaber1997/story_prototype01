@@ -8,4 +8,5 @@ accelerate
 diffusers
 # Qt & GUI
 PySide6
+openai
 python-dotenv

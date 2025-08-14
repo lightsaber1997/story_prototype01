@@ -45,11 +45,14 @@ class MainApp(QMainWindow):
         # initial state
         self.update_page_display()
         
-        # 버튼 연결 해야 할 부분
-
-        from chat_gpt_engine import ChatGPTEngine
-        # initialization for llm engine
-        self.llm_engine = ChatGPTEngine()
+        # GPT API 활용
+        # from chat_gpt_engine import ChatGPTEngine
+        # # initialization for llm engine
+        # self.llm_engine = ChatGPTEngine()
+        
+        # phi3_mini 활용
+        from phi3_mini_engine import Phi3MiniEngine
+        self.llm_engine = Phi3MiniEngine()
         self.story_parts: List[str] = []
         self.chat_controller = ChatController(self._on_chat_reply, self.llm_engine)
 
