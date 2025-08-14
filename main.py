@@ -47,11 +47,11 @@ class MainApp(QMainWindow):
         
         # 버튼 연결 해야 할 부분
 
-
+        from chat_gpt_engine import ChatGPTEngine
         # initialization for llm engine
-        self.llm_engline = Phi3MiniEngine()
+        self.llm_engine = ChatGPTEngine()
         self.story_parts: List[str] = []
-        self.chat_controller = ChatController(self._on_chat_reply, self.llm_engline)
+        self.chat_controller = ChatController(self._on_chat_reply, self.llm_engine)
 
         # For image generation
         self.image_gen_engine = StableV15Engine()
