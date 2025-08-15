@@ -7,10 +7,18 @@ class Ui_StartWidget:
     def setupUi(self, StartWidget):
         StartWidget.setObjectName("StartWidget")
         StartWidget.setWindowTitle("MyStoryPal")
-        # StartWidget.setFixedSize(800, 600)  # 이 부분을 제거하여 창 크기 조절 가능하게 함
 
-        # 메인 레이아웃
-        self.main_layout = QVBoxLayout(StartWidget)  # StartWidget에 직접 레이아웃을 연결
+        # StartWidget에 메인 레이아웃을 직접 연결
+        self.root_layout = QVBoxLayout(StartWidget)
+        self.root_layout.setContentsMargins(0, 0, 0, 0)
+        self.root_layout.setSpacing(0)
+
+        # 배경을 담을 컨테이너 위젯 복원 (반응형으로 확장)
+        self.background_container = QWidget()
+        self.background_container.setObjectName("background_container")
+
+        # 메인 레이아웃 (background_container에 연결)
+        self.main_layout = QVBoxLayout(self.background_container)
         self.main_layout.setContentsMargins(30, 30, 30, 30)
         self.main_layout.setSpacing(25)
 
@@ -29,18 +37,16 @@ class Ui_StartWidget:
         self.button_container.setObjectName("button_container")
         self.button_layout = QVBoxLayout(self.button_container)
         self.button_layout.setSpacing(20)
-        self.button_layout.setContentsMargins(0, 0, 0, 0)  # 고정된 마진 제거
+        self.button_layout.setContentsMargins(0, 0, 0, 0)
 
         # 텍스팅 버튼
         self.texting_btn = QPushButton("✏️ texting!")
         self.texting_btn.setObjectName("texting_btn")
-        self.texting_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.texting_btn.setFixedHeight(60)
 
         # 이미지 업로드 버튼
         self.upload_btn = QPushButton("🖼️ upload image")
         self.upload_btn.setObjectName("upload_btn")
-        self.upload_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.upload_btn.setFixedHeight(60)
 
         # 하단 마법 요소
@@ -59,14 +65,17 @@ class Ui_StartWidget:
         # 버튼 컨테이너를 QHBoxLayout에 추가하여 가운데 정렬
         self.button_wrapper_layout = QHBoxLayout()
         self.button_wrapper_layout.addStretch(1)
-        self.button_wrapper_layout.addWidget(self.button_container, 2)  # 가운데 버튼 컨테이너에 2의 비율 할당
+        self.button_wrapper_layout.addWidget(self.button_container, 2)
         self.button_wrapper_layout.addStretch(1)
 
-        self.main_layout.addLayout(self.button_wrapper_layout, 2)  # 버튼 영역에 2의 비율 할당
+        self.main_layout.addLayout(self.button_wrapper_layout, 2)
         self.main_layout.addStretch(2)
         self.main_layout.addWidget(self.magic_footer, 1)
 
-        # 배경을 담을 컨테이너 위젯과 스타일은 StartWidget 자체에 적용
+        # root_layout에 background_container 추가
+        self.root_layout.addWidget(self.background_container)
+
+        # 스타일 적용
         self.setup_styles(StartWidget)
 
         # 마법 같은 그림자 효과
@@ -74,9 +83,12 @@ class Ui_StartWidget:
 
     def setup_styles(self, StartWidget):
         """스타일 설정"""
-        # StartWidget에 배경색 적용
-        StartWidget.setStyleSheet("""
-            QWidget#StartWidget {
+        # StartWidget 자체는 투명하게 유지
+        StartWidget.setStyleSheet("QWidget#StartWidget { background: transparent; }")
+
+        # background_container에만 배경색 적용
+        self.background_container.setStyleSheet("""
+            QWidget#background_container {
                 background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1,
                                           stop: 0 #FFF8DC, stop: 0.3 #FFFACD, 
                                           stop: 0.7 #F5DEB3, stop: 1 #DEB887);

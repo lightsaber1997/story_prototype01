@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QWidget, QFileDialog
 from app.ui.ui_start_widget import Ui_StartWidget
 
-class StartWidget(QWidget):
+class StartPageWidget(QWidget):
     def __init__(self, stacked_widget, app_state):
         super().__init__()
         self.stacked_widget = stacked_widget
@@ -36,7 +36,7 @@ class StartWidget(QWidget):
         if file_path:
             print(f"[StartWidget] Image uploaded: {file_path}")
             self.app_state.start_mode = "image_upload"
-            self.app_state.image_path = file_path
+            self.app_state.image_path =     file_path
             self.go_to_next_page()
 
     def go_to_next_page(self):
