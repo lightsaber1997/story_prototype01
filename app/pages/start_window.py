@@ -1,0 +1,39 @@
+# main_window.py
+from PySide6.QtWidgets import QMainWindow, QStackedWidget
+from app.pages.start_widget import StartWidget
+from app.pages.story_writing_page import StoryWritingPage
+from app.core.llm_factory import get_llm_engine
+from stable_engine import StableV15Engine
+from app.core.app_state import AppState
+
+class StartWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        # 공용 상태 및 엔진 초기화
+        self.app_state = AppState()
+        # QStackedWidget: 페이지 스위칭 컨테이너
+        self.stack = QStackedWidget()
+
+        self.llm_engine = get_llm_engine()
+        self.image_gen_engine = StableV15Engine()
+
+        # 페이지 생성
+        self.start_widget = StartWidget(self.stack, self.app_state)
+        self.story_writing_page = StoryWritingPage(
+            stacked_widget=self.stack,
+            llm_engine=self.llm_engine,
+            image_gen_engine=self.image_gen_engine,
+            app_state=self.app_state
+        )
+
+        # 페이지 등록
+        self.stack.addWidget(self.start_widget)         # index 0
+        self.stack.addWidget(self.story_writing_page) # index 1
+        self.stack.setCurrentIndex(0)  # 시작 페이지부터
+
+        # 중앙 위젯 설정
+        self.setCentralWidget(self.stack)
+
+    def _on_image_gen_ready(self, payload: dict):
+        pass  # Optional: 이미지 생성 완료 핸들러
