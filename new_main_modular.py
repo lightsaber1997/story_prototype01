@@ -43,7 +43,7 @@ class MainApp(QMainWindow):
         self.setMinimumSize(1200, 700)
         self.resize(1400, 800)  # 더 적당한 크기로 조정
         
-        # 메인 배경색 설정 - main_ui_colorful.py와 동일한 파란색
+        # 메인 배경색 설정 
         palette = QPalette()
         brush = QBrush(QColor(85, 175, 240, 255))  # main_ui_colorful.py와 동일한 파란색
         brush.setStyle(Qt.BrushStyle.SolidPattern)
