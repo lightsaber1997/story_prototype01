@@ -20,7 +20,7 @@ from engines.stable_engine import StableV15Engine
 from engines.image_gen_engine import *
 
 
-class ModularMainApp(QMainWindow):
+class MainApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setupUI()
@@ -35,6 +35,7 @@ class ModularMainApp(QMainWindow):
         
         # 초기 상태 설정
         self.updateUI()
+
     
     def setupUI(self):
         """UI 설정"""
@@ -56,10 +57,10 @@ class ModularMainApp(QMainWindow):
         self.centralWidget = QWidget()
         self.setCentralWidget(self.centralWidget)
         
-        # 메인 수평 레이아웃 (둥근 모서리 없이, 세로 전체 차지)
+        # 메인 수평 레이아웃
         self.mainLayout = QHBoxLayout(self.centralWidget)
-        self.mainLayout.setContentsMargins(0, 0, 0, 0)  # 여백 제거
-        self.mainLayout.setSpacing(0)  # 간격 제거
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)  
+        self.mainLayout.setSpacing(0) 
         
         # 컴포넌트들 생성 및 추가
         self.navigationBar = NavigationBar()
@@ -74,8 +75,11 @@ class ModularMainApp(QMainWindow):
     def setupAI(self):
         """AI 엔진 설정"""
         try:
-            from engines.chat_gpt_engine import ChatGPTEngine
-            self.llm_engine = ChatGPTEngine()
+            # from engines.chat_gpt_engine import ChatGPTEngine
+            # self.llm_engine = ChatGPTEngine()
+            # llm 모델 가져오기 (phi3_mini 활용)
+            from core.llm_factory import get_llm_engine
+            self.llm_engine = get_llm_engine()
             self.chat_controller = ChatController(self._on_chat_reply, self.llm_engine)
 
             # 이미지 생성 엔진
@@ -283,6 +287,6 @@ class ModularMainApp(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = ModularMainApp()
+    window = MainApp()
     window.show()
     sys.exit(app.exec())

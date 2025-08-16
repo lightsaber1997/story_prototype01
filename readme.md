@@ -109,12 +109,13 @@ Detailed license conditions for each package and model can be found in the LICEN
 - Python runtime: Python 3.12.11
 - torch v2.6.0+cu118: BSD‑3‑Clause License
 - torchaudio v2.6.0: BSD‑3‑Clause (same license as PyTorch)
-- torchvision v2.6.0: BSD‑3‑Clause
+- torchvision v0.21.0: BSD‑3‑Clause
 - transformers v4.54.0: Apache License 2.0 (code level)  
 - accelerate v1.9.0: Apache License 2.0 (including patent rights)
 - diffusers: Apache License
 - PySide6 v6.9.1: LGPL‑3.0‑only or GPL‑3.0‑only 
   ※ LGPL conditions must be met for commercial distribution.
+- pyttsx3 v2.99: MPL‑2.0
 
 #### Pre-trained Models
 
