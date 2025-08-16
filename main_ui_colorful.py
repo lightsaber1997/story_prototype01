@@ -107,28 +107,33 @@ class Ui_StoryMakerMainWindow(object):
         self.chatList.setFont(font_chat)
         self.chatList.setStyleSheet("""
             QListWidget {
-                background: rgba(255, 255, 255, 0.8);
-                border: 1px solid rgba(255, 255, 255, 0.3);
-                border-radius: 12px;
-                padding: 12px;
+                background: rgba(255, 248, 220, 0.9);
+                border: 1px solid rgba(200, 200, 200, 0.3);
+                border-radius: 15px;
+                padding: 15px;
                 color: #333333;
                 font-size: 14px;
             }
             QListWidget::item {
-                padding: 12px 15px;
-                margin: 4px 0px;
-                border-radius: 8px;
-                background: rgba(90, 119, 236, 0.1);
-                border: 1px solid rgba(90, 119, 236, 0.2);
-                line-height: 1.4;
+                padding: 12px 18px;
+                margin: 6px 15px;
+                border-radius: 18px;
+                border: 1px solid rgba(0, 0, 0, 0.1);
+                line-height: 1.5;
+                font-weight: 500;
+                min-height: 25px;
+                max-width: 80%;
+                background: #ff6b6b;
+                color: white;
             }
             QListWidget::item:hover {
-                background: rgba(90, 119, 236, 0.2);
-                border-color: rgba(90, 119, 236, 0.4);
+                opacity: 0.9;
+                background: #ff5252;
             }
             QListWidget::item:selected {
-                background: rgba(90, 119, 236, 0.3);
-                border-color: rgba(90, 119, 236, 0.5);
+                outline: none;
+                border: 2px solid rgba(255, 165, 0, 0.5);
+                background: #ff4444;
             }
         """)
         self.chatList.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)

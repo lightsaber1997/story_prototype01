@@ -9,3 +9,5 @@ diffusers
 # Qt & GUI
 PySide6
 python-dotenv
+# OpenAI API
+openai
