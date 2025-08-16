@@ -34,7 +34,7 @@ class StorybookArea(QFrame):
         
         self.setStyleSheet("""
             QFrame#storybookArea {
-                background: #F5F5F5;
+                background: rgba(255, 255, 255, 1.0);
                 background-image: linear-gradient(90deg, rgba(227,227,227,1) 0%, rgba(247,247,247,0) 18%);
                 border-left: 2px solid rgba(200, 200, 200, 0.3);
                 padding: 0px;
@@ -45,7 +45,7 @@ class StorybookArea(QFrame):
         
         # 레이아웃 설정
         self.layout = QVBoxLayout(self)
-        self.layout.setSpacing(20)
+        # self.layout.setSpacing(20)
         self.layout.setContentsMargins(25, 25, 25, 25)
         
         # UI 컴포넌트들 생성
@@ -54,7 +54,7 @@ class StorybookArea(QFrame):
     def createComponents(self):
         """스토리북 영역 컴포넌트들 생성"""
         # 스토리북 제목
-        self.storybookTitle = QLabel("MyStoryPal", self)
+        self.storybookTitle = QLabel("CHAPTER 1", self)
         self.storybookTitle.setObjectName("storybookTitle")
         
         font_title = QFont()
@@ -91,12 +91,11 @@ class StorybookArea(QFrame):
         
         self.imageArea.setStyleSheet("""
             QLabel {
-                background: #FAFAFA;
-                border: 1px solid rgba(200, 200, 200, 0.4);
+                background: #FFFFFF;
                 color: #7f8c8d;
                 font-size: 14px;
                 font-style: italic;
-                margin: 10px 20px;
+                margin: 0px 20px;
             }
         """)
         
@@ -208,9 +207,9 @@ class StorybookArea(QFrame):
         self.textScrollArea.setWidgetResizable(True)
         self.textScrollArea.setStyleSheet("""
             QScrollArea {
-                background: #FAFAFA;
+                background: #FFFFFF;
                 border: none;
-                margin: 10px 20px;
+                margin: 0px 20px;
             }
             QScrollBar:vertical {
                 background: rgba(200, 200, 200, 0.2);
@@ -243,7 +242,7 @@ class StorybookArea(QFrame):
                 color: #2A2935;
                 padding: 30px 40px;
                 line-height: 1.7;
-                background: #FAFAFA;
+                background: #FFFFFF;
                 text-align: justify;
                 font-family: 'Georgia', 'Times New Roman', serif;
                 font-size: 18px;
