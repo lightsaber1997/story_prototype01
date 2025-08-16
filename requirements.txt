@@ -7,3 +7,4 @@ diffusers==0.34.0
 PySide6==6.9.1
 openai
 python-dotenv
+pyttsx3==2.99
