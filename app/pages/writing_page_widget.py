@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QMessageBox, QListWidgetItem, QVBoxLayout
+from PySide6.QtWidgets import QMainWindow, QMessageBox, QListWidgetItem, QVBoxLayout
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from pathlib import Path
@@ -10,7 +10,7 @@ from image_gen_engine import ImageGenController
 import format_helper
 
 
-class WritingPageWidget(QWidget):  # QMainWindow -> QWidget으로 변경
+class WritingPageWidget(QMainWindow):
     def __init__(self, stacked_widget, llm_engine, image_gen_engine, app_state):
         super().__init__()
         self.stacked_widget = stacked_widget
