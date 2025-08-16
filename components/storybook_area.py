@@ -102,13 +102,13 @@ class StorybookArea(QFrame):
         # 텍스트 영역 (스크롤 가능)
         self.createTextArea()
         
-        # 페이지 네비게이션 (책 스타일)
+        # 페이지 네비게이션
         self.createBookPageNavigation()
         
         # 레이아웃에 컴포넌트 추가
         self.layout.addWidget(self.storybookTitle)
         self.layout.addWidget(self.imageArea)
-        self.layout.addWidget(self.textScrollArea, 1)  # 확장 가능
+        self.layout.addWidget(self.textScrollArea, 1)
         self.layout.addWidget(self.pageNavFrame)
     
     def createPageNavigation(self):
@@ -232,7 +232,7 @@ class StorybookArea(QFrame):
         self.textContent.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self.textContent.setText("")
         
-        # 책 스타일 텍스트 폰트 및 스타일
+        # 텍스트 폰트 
         font_content = QFont()
         font_content.setFamilies(["Georgia", "Times New Roman", "serif"])  
         font_content.setPointSize(self._get_relative_font_size(18))  
@@ -252,7 +252,7 @@ class StorybookArea(QFrame):
         self.textScrollArea.setWidget(self.textContent)
     
     def createBookPageNavigation(self):
-        """책 스타일의 페이지 네비게이션 생성"""
+        """페이지 네비게이션 생성"""
         self.pageNavFrame = QFrame(self)
         self.pageNavFrame.setObjectName("pageNavFrame")
         self.pageNavFrame.setFixedHeight(60)
