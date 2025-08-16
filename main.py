@@ -24,7 +24,7 @@ from image_gen_engine import *
 
 
 
-# ex) ai_module.py 파일의 ask_ai 메서드라고 가정 
+# ex) ai_module.py 파일의 ask_ai 메서드라고 가정
 # from ai_module import ask_ai
 
 class MainApp(QMainWindow):
@@ -45,14 +45,9 @@ class MainApp(QMainWindow):
         # initial state
         self.update_page_display()
         
-        # GPT API 활용
-        # from chat_gpt_engine import ChatGPTEngine
-        # # initialization for llm engine
-        # self.llm_engine = ChatGPTEngine()
-        
-        # phi3_mini 활용
-        from phi3_mini_engine import Phi3MiniEngine
-        self.llm_engine = Phi3MiniEngine()
+        # llm 모델 가져오기 (phi3_mini 활용)
+        from core.llm_factory import get_llm_engine
+        self.llm_engine = get_llm_engine()
         self.story_parts: List[str] = []
         self.chat_controller = ChatController(self._on_chat_reply, self.llm_engine)
 
