@@ -115,6 +115,7 @@ Detailed license conditions for each package and model can be found in the LICEN
 - diffusers: Apache License
 - PySide6 v6.9.1: LGPL‑3.0‑only or GPL‑3.0‑only 
   ※ LGPL conditions must be met for commercial distribution.
+- pyttsx3 v2.99: MPL‑2.0
 
 #### Pre-trained Models
 
