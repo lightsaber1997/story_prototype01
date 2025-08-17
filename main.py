@@ -3,376 +3,287 @@ import sys, re, json, textwrap, random, string, collections
 from pathlib import Path
 from typing import Dict, List
 
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QListWidgetItem
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QHBoxLayout, QWidget
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPalette, QBrush, QColor
 
+# 컴포넌트 임포트
+from components.navigation_bar import NavigationBar
+from components.chat_area import ChatArea
+from components.storybook_area import StorybookArea
 
-from main_ui_colorful import Ui_StoryMakerMainWindow
-# ── Transformers / Torch
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-
-
-
-from phi3_mini_engine import Phi3MiniEngine
-from chat_engine import *
+# AI 엔진 임포트
+from engines.phi3_mini_engine import Phi3MiniEngine
+from engines.chat_engine import *
 import format_helper
+from engines.stable_engine import StableV15Engine
+from engines.image_gen_engine import *
 
-from stable_engine import StableV15Engine
-from image_gen_engine import *
-
-
-
-# ex) ai_module.py 파일의 ask_ai 메서드라고 가정
-# from ai_module import ask_ai
 
 class MainApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.ui = Ui_StoryMakerMainWindow()
-        self.ui.setupUi(self)
+        self.setupUI()
+        self.setupAI()
+        self.connectSignals()
         
-        # 현재 페이지 (임시)
+        # 스토리 관리 변수들
         self.current_page_idx = 0
-        self.total_pages = 3
-        self.story_pages = ["Once upon a time...", "", ""]  # 각 페이지의 스토리
-        
-        self.story_pages_list = [] # double list. each list inside include [user input, ai response, user input, ai response]
-
-        self.connect_signals()
-        
-        # initial state
-        self.update_page_display()
-        
-        # llm 모델 가져오기 (phi3_mini 활용)
-        from core.llm_factory import get_llm_engine
-        self.llm_engine = get_llm_engine()
+        self.story_pages_list = []  # 각 페이지별 스토리 세그먼트들
+        self.page_images: Dict[int, str] = {}  # 각 페이지별 생성된 이미지
         self.story_parts: List[str] = []
-        self.chat_controller = ChatController(self._on_chat_reply, self.llm_engine)
-
-        # For image generation
-        self.image_gen_engine = StableV15Engine()
-        self.image_gen_controller = ImageGenController(
-            self._on_image_gen_ready, 
-            self.image_gen_engine)
-
-        # 각 페이지별 생성된 이미지 저장
-        self.page_images: Dict[int, str] = {}  # {page_index: image_path}
-
-
-    def connect_signals(self):
-        """버튼과 이벤트를 연결"""
-
-        self.ui.btnContinueStory.clicked.connect(self._on_chat_send)
-        self.ui.btnSaveStory.clicked.connect(self.save_story)
         
-        # 페이지 네비게이션
-        self.ui.label_page_prev.mousePressEvent = self.previous_page
-        self.ui.label_page_next.mousePressEvent = self.next_page
+        # 초기 상태 설정
+        self.updateUI()
+
+    
+    def setupUI(self):
+        """UI 설정"""
+        self.setWindowTitle("MyStoryPal")
+        self.setMinimumSize(1200, 700)
+        self.resize(1400, 800)  # 더 적당한 크기로 조정
+        
+        # 메인 배경색 설정 
+        palette = QPalette()
+        brush = QBrush(QColor(85, 175, 240, 255))  # main_ui_colorful.py와 동일한 파란색
+        brush.setStyle(Qt.BrushStyle.SolidPattern)
+        palette.setBrush(QPalette.ColorGroup.Active, QPalette.ColorRole.Window, brush)
+        palette.setBrush(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Window, brush)
+        palette.setBrush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Base, brush)
+        palette.setBrush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Window, brush)
+        self.setPalette(palette)
+        
+        # 중앙 위젯 설정
+        self.centralWidget = QWidget()
+        self.setCentralWidget(self.centralWidget)
+        
+        # 메인 수평 레이아웃
+        self.mainLayout = QHBoxLayout(self.centralWidget)
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)  
+        self.mainLayout.setSpacing(0) 
+        
+        # 컴포넌트들 생성 및 추가
+        self.navigationBar = NavigationBar()
+        self.chatArea = ChatArea()
+        self.storybookArea = StorybookArea()
+        
+        # 레이아웃에 컴포넌트 추가 - 3:5 비율로 조정
+        self.mainLayout.addWidget(self.navigationBar)  # 고정 너비 (80px)
+        self.mainLayout.addWidget(self.chatArea, 3)    # 채팅 영역 3
+        self.mainLayout.addWidget(self.storybookArea, 5)  # 스토리북 영역 5
+    
+    def setupAI(self):
+        """AI 엔진 설정"""
+        try:
+            # from engines.chat_gpt_engine import ChatGPTEngine
+            # self.llm_engine = ChatGPTEngine()
+            # llm 모델 가져오기 (phi3_mini 활용)
+            from core.llm_factory import get_llm_engine
+            self.llm_engine = get_llm_engine()
+            self.chat_controller = ChatController(self._on_chat_reply, self.llm_engine)
+
+            # 이미지 생성 엔진
+            self.image_gen_engine = StableV15Engine()
+            self.image_gen_controller = ImageGenController(
+                self._on_image_gen_ready, 
+                self.image_gen_engine)
+            
+            print("AI 엔진 초기화 완료")
+        except Exception as e:
+            print(f"AI 엔진 초기화 실패: {e}")
+            QMessageBox.warning(self, "AI 엔진 오류", f"AI 엔진 초기화에 실패했습니다: {e}")
+    
+    def connectSignals(self):
+        """시그널 연결"""
+        # 네비게이션 바 시그널
+        self.navigationBar.homeClicked.connect(self.onHomeClicked)
+        self.navigationBar.settingsClicked.connect(self.onSettingsClicked)
+        self.navigationBar.helpClicked.connect(self.onHelpClicked)
+        
+        # 채팅 영역 시그널
+        self.chatArea.messageSent.connect(self.onMessageSent)
+        
+        # 스토리북 영역 시그널
+        self.storybookArea.pageChanged.connect(self.onPageChanged)
+        self.storybookArea.storySaved.connect(self.onStorySaved)
+    
+    def closeEvent(self, event):
+        """애플리케이션 종료 시 스레드 정리"""
+        try:
+            if hasattr(self, 'chat_controller'):
+                self.chat_controller.workerThread.quit()
+                self.chat_controller.workerThread.wait(3000)
+            if hasattr(self, 'image_gen_controller'):
+                self.image_gen_controller.workerThread.quit()
+                self.image_gen_controller.workerThread.wait(3000)
+        except:
+            pass
+        event.accept()
+    
+    # ========== 이벤트 핸들러들 ==========
+    
+    def onHomeClicked(self):
+        """홈 버튼 클릭"""
+        self.navigationBar.setActiveButton("home")
+        QMessageBox.information(self, "홈", "홈 기능이 구현될 예정입니다.")
+    
+    def onSettingsClicked(self):
+        """설정 버튼 클릭"""
+        self.navigationBar.setActiveButton("settings")
+        QMessageBox.information(self, "설정", "설정 기능이 구현될 예정입니다.")
+    
+    def onHelpClicked(self):
+        """도움말 버튼 클릭"""
+        self.navigationBar.setActiveButton("help")
+        QMessageBox.information(self, "도움말", 
+                               "MyStoryPal 사용법:\n\n"
+                               "1. 채팅창에 스토리를 입력하세요\n"
+                               "2. AI가 문법을 수정하고 스토리를 이어갑니다\n"
+                               "3. 오른쪽에서 완성된 스토리북을 확인하세요\n"
+                               "4. 이미지가 자동으로 생성됩니다")
+    
+    def onMessageSent(self, message: str):
+        """메시지 전송 처리"""
+        if not message.strip():
+            QMessageBox.warning(self, "입력 오류", "스토리를 입력해주세요!")
+            return
+        
+        # 사용자 메시지를 채팅에 추가
+        self.chatArea.addMessage(message, is_user=True)
+        
+        # AI에게 메시지 전송
+        if hasattr(self, 'chat_controller'):
+            self.chat_controller.operate.emit(message)
+        else:
+            QMessageBox.warning(self, "AI 오류", "AI 엔진이 초기화되지 않았습니다.")
+    
+    def onPageChanged(self, page: int):
+        """페이지 변경 처리"""
+        self.current_page_idx = page
+        self.updateStorybookDisplay()
+    
+    def onStorySaved(self):
+        """스토리 저장 처리"""
+        QMessageBox.information(self, "저장 완료", "스토리북이 성공적으로 저장되었습니다!")
+    
+    # ========== AI 응답 처리 ==========
+    
+    def _on_chat_reply(self, payload: Dict[str, str]) -> None:
+        """AI 채팅 응답 처리"""
+        kind = payload["type"]
+        text = payload["text"]
+
+        if kind == "story_line":
+            # AI 문법 수정 메시지
+            self.chatArea.addMessage(f"문법 수정: {text}", is_user=False, message_type="correction")
+            self._append_to_story(text + " ")
+
+        elif kind == "ai_suggestion":
+            # AI 스토리 제안 메시지
+            self.chatArea.addMessage(text, is_user=False, message_type="story")
+            self._append_to_story(text + " ")
+
+        elif kind == "chat_answer":
+            # AI 일반 답변 메시지
+            self.chatArea.addMessage(text, is_user=False, message_type="chat")
+        
+        # 스토리 업데이트
+        self.updateUI()
+        
+        # 이미지 생성 조건 확인
+        self.checkImageGeneration()
     
     def _on_image_gen_ready(self, payload: dict):
+        """이미지 생성 완료 처리"""
         if payload["type"] == "image_generated":
             image = payload["image"]
             prompt = payload["prompt"]
 
-            # Optional: Save or display
+            # 이미지 저장
             page_idx = self.current_page_idx
             save_path = f"images/page_{page_idx + 1}.png"
             StableV15Engine.save_image(image, save_path)
             self.page_images[page_idx] = save_path
 
             print(f"[Image] Saved to {save_path} from prompt: {prompt}")
-
-            # Optional: show in UI (e.g., QLabel pixmap)
-            # self.ui.imageLabel.setPixmap(QPixmap(save_path))
+            
+            # UI에 이미지 표시
+            self.storybookArea.setStoryImage(save_path)
 
         elif payload["type"] == "error":
-            QMessageBox.critical(self, "Image Error", f"Failed to generate image:\n{payload['error']}")
-
-
-        
-        self._display_image_on_label(save_path)
-
-
-    def _on_chat_send(self) -> None:
-        user_input = self.ui.textEdit_childStory.toPlainText().strip()
-        
-        if not user_input:
-            QMessageBox.warning(self, "입력 오류", "스토리를 입력해주세요!")
-            return
-            
-        item = QListWidgetItem(f"사용자: {user_input}")
-        item.setTextAlignment(Qt.AlignmentFlag.AlignLeft)
-        # 줄바꿈을 위한 플래그 설정
-        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
-        self.ui.chatList.addItem(item)
-
-        print(f"user_input: {user_input}")
-        print(type(user_input))
-        
-        self.ui.textEdit_childStory.clear()
-
-        self.chat_controller.operate.emit(user_input)
-
-
-    def _on_chat_reply(self, payload: Dict[str, str]) -> None:
-        kind = payload["type"]
-        text = payload["text"]
-
-        if kind == "story_line":
-            item = QListWidgetItem(f"AI (fixed): {text}")
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
-            self.ui.chatList.addItem(item)
-            self._append_to_story(text + " ")
-
-        elif kind == "ai_suggestion":
-            item = QListWidgetItem(f"AI: {text}")
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
-            self.ui.chatList.addItem(item)
-            self._append_to_story(text + " ")
-
-        elif kind == "chat_answer":
-            item = QListWidgetItem(f"AI: {text}")
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
-            self.ui.chatList.addItem(item)
-            # self.chat_list.addItem()
-        
-        self.current_page_idx = len(self.story_pages_list) - 1
-        self.update_page_display()
-        self.update_story_display()
-        self.ui.textEdit_childStory.clear()
-        self.ui.chatList.scrollToBottom()
-
-        # print every 2nd message in a page
-        segments = self.story_pages_list[self.current_page_idx]
-        select_idx = 1
-        if segments is not None and (len(segments) == select_idx + 1):
-            prompt_for_image = segments[select_idx]
-            prompt_for_image = format_helper.first_sentence(prompt_for_image)
-            prompt_for_image += " children's picture book"
-            print(prompt_for_image)
-            self.image_gen_controller.operate.emit(prompt_for_image)
-
-        
-
-    def _display_image_on_label(self, image_path: str) -> None:
-        try:
-            if Path(image_path).exists():
-                pixmap = QPixmap(image_path)
-
-                if not pixmap.isNull():
-                    # label 크기에 맞게 이미지 스케일링 (비율 유지)
-                    scaled_pixmap = pixmap.scaled(
-                        self.ui.label_generatedImage.size(),
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation
-                    )
-                    
-                    self.ui.label_generatedImage.setPixmap(scaled_pixmap)
-                    self.ui.label_generatedImage.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                    print(f"이미지 표시 완료: {image_path}")
-                else:
-                    print(f"이미지 로드 실패: {image_path}")
-                    self._show_placeholder_text()
-            else:
-                print(f"이미지 파일이 존재하지 않음: {image_path}")
-                # 더미 이미지의 경우 기본 배경 이미지나 플레이스홀더 표시
-                self._show_placeholder_image()
-                
-        except Exception as e:
-            print(f"이미지 표시 중 오류 발생: {e}")
-            self._show_placeholder_text()
+            QMessageBox.critical(self, "이미지 생성 오류", f"이미지 생성에 실패했습니다:\n{payload['error']}")
     
-    def _show_placeholder_text(self) -> None:
-        """플레이스홀더 텍스트를 표시합니다."""
-        self.ui.label_generatedImage.clear()
-        self.ui.label_generatedImage.setText("🎨 Generated image will appear here")
-        self.ui.label_generatedImage.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-
-    # ------------- Helpers ---------------------------------------------------
+    # ========== 스토리 관리 ==========
+    
     def _append_to_story(self, segment: str) -> None:
+        """스토리 세그먼트 추가"""
         self.story_parts.append(segment)
         self._add_to_story_pages_list(segment)
-        print(f"self.story_pages_list: {self.story_pages_list}")
+        print(f"story_pages_list: {self.story_pages_list}")
     
     def _add_to_story_pages_list(self, segment: str, num_page_segment: int = 4) -> None:
-        """
-        Add a text *segment* to self.story_pages_list.
-
-        • self.story_pages_list is a list of “pages” (each page is a list of segments).
-        • Each page can hold at most *num_page_segment* segments.
-        • When the current (last) page is full, start a new page.
-        """
-
-        # If no pages exist yet, create the first one with this segment.
+        """스토리 세그먼트를 페이지별로 관리"""
         if not self.story_pages_list:
             self.story_pages_list.append([segment])
             return
 
-        # Work with the last (current) page.
         last_index = len(self.story_pages_list) - 1
         current_page = self.story_pages_list[last_index]
 
-        # ▸ BUG FIX: compare the **length of the page** to the capacity,
-        #   not the page itself.  Originally `len(self.story_pages_list[last_index] == num_page_segment)`
-        #   evaluated the boolean first, then tried to take len() of True/False.
         if len(current_page) == num_page_segment:
-            # Current page is full → start a new page.
             self.story_pages_list.append([segment])
         else:
-            # There is room → append to current page.
             current_page.append(segment)
-
     
-    
-
-
-        
-        # ai 에 메세지 보내기
-    def continue_story(self):
-        """스토리 계속하기 버튼 클릭 시 실행"""
-        user_input = self.ui.textEdit_childStory.toPlainText().strip()
-        
-        if not user_input:
-            QMessageBox.warning(self, "입력 오류", "스토리를 입력해주세요!")
+    def checkImageGeneration(self):
+        """이미지 생성 조건 확인"""
+        if not self.story_pages_list:
             return
             
-        item = QListWidgetItem(f"사용자: {user_input}")
-        item.setTextAlignment(Qt.AlignmentFlag.AlignLeft)
-        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
-        self.ui.chatList.addItem(item)
+        segments = self.story_pages_list[self.current_page_idx]
+        select_idx = 1
         
-        # AI 응답 (실제로는 AI 모델 호출 예정)
-        # 아래 48th line을 주석 해제하고 49th line을 주석처리 하시면 됩니다.
-        # ai_response = ask_ai(user_input)
-        ai_response = f"AI가 '{user_input}'을 바탕으로 스토리를 계속 만들어갑니다..."
-        ai_item = QListWidgetItem(f"AI: {ai_response}")
-        ai_item.setTextAlignment(Qt.AlignmentFlag.AlignRight)
-        ai_item.setFlags(ai_item.flags() | Qt.ItemFlag.ItemIsEnabled)
-        self.ui.chatList.addItem(ai_item)
-        
-        self.story_pages[self.current_page - 1] += f" {user_input}"
-        self.update_story_display()
-        self.ui.textEdit_childStory.clear()
-        self.ui.chatList.scrollToBottom()
-        
-    def save_story(self):
-        """스토리북 저장 버튼 클릭 시 실행"""
-        QMessageBox.information(self, "저장 완료", "스토리북이 성공적으로 저장되었습니다!")
-        
-    def previous_page(self, event):
-        """이전 페이지로 이동"""
-        if self.current_page_idx > 0:
-            self.current_page_idx -= 1
-            self.update_page_display()
-            self.update_story_display(self.current_page_idx)
+        if segments is not None and (len(segments) == select_idx + 1):
+            prompt_for_image = segments[select_idx]
+            prompt_for_image = format_helper.first_sentence(prompt_for_image)
+            prompt_for_image += " children's picture book"
+            print(f"이미지 생성 프롬프트: {prompt_for_image}")
             
-    def next_page(self, event):
-        """다음 페이지로 이동"""
-        if self.current_page_idx < self.total_pages - 1:
-            self.current_page_idx += 1
-            self.update_page_display()
-            self.update_story_display(self.current_page_idx)
-            
-    def update_page_display(self):
-        """페이지 표시 업데이트"""
-        self.ui.label_page.setText(f"{self.current_page_idx+1}/{self.total_pages}")
+            if hasattr(self, 'image_gen_controller'):
+                self.image_gen_controller.operate.emit(prompt_for_image)
     
-        if self.current_page_idx == 0:
-            self.ui.label_page_prev.setStyleSheet("""
-                QLabel {
-                    color: #666666;
-                    background: rgba(255, 255, 255, 0.05);
-                    border-radius: 20px;
-                    padding: 10px 15px;
-                    min-width: 40px;
-                    min-height: 40px;
-                }
-            """)
-        else:
-            self.ui.label_page_prev.setStyleSheet("""
-                QLabel {
-                    color: #ffffff;
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 20px;
-                    padding: 10px 15px;
-                    min-width: 40px;
-                    min-height: 40px;
-                }
-                QLabel:hover {
-                    background: rgba(255, 255, 255, 0.2);
-                    color: #ffd54f;
-                }
-            """)
-            
-        if self.current_page_idx == (self.total_pages - 1):
-            self.ui.label_page_next.setStyleSheet("""
-                QLabel {
-                    color: #666666;
-                    background: rgba(255, 255, 255, 0.05);
-                    border-radius: 20px;
-                    padding: 10px 15px;
-                    min-width: 40px;
-                    min-height: 40px;
-                }
-            """)
-        else:
-            self.ui.label_page_next.setStyleSheet("""
-                QLabel {
-                    color: #ffffff;
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 20px;
-                    padding: 10px 15px;
-                    min-width: 40px;
-                    min-height: 40px;
-                }
-                QLabel:hover {
-                    background: rgba(255, 255, 255, 0.2);
-                    color: #ffd54f;
-                }
-            """)
-            
-    # def update_story_display(self):
-    #     """현재 페이지의 스토리 표시 업데이트"""
-    #     current_story = self.story_pages[self.current_page - 1]
-        
-    #     self.ui.chatList_2.clear()
-    #     if current_story:
-    #         item = QListWidgetItem(current_story)
-    #         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-    #         self.ui.chatList_2.addItem(item)
-
+    # ========== UI 업데이트 ==========
     
-    def update_story_display(self, page_idx=None):
-        """현재 페이지의 스토리 표시 업데이트"""
-        # self.story_pages: ["adsfdfdsfa", "dfadfasdfa", "dfadfadf"]
-        # self.story_pages_list = [
-        #     ["asdfadsfadsf", "Adfadfadf", "afdafadf", "dfadfadf"],
-        #     ["asdfadsfadsf", "Adfadfadf", "afdafadf", "dfadfadf"]
-        #     ,
-        #     ["asdfadsfadsf", "Adfadfadf", "afdafadf", "dfadfadf"],
-        #     ["asdfadsfadsf", "Adfadfadf", "afdafadf", "dfadfadf"]
-        # ]
-        if page_idx is None:
-
-            page_idx = len(self.story_pages_list) - 1
+    def updateUI(self):
+        """전체 UI 업데이트"""
+        self.updateStorybookArea()
+        self.updateStorybookDisplay()
+    
+    def updateStorybookArea(self):
+        """스토리북 영역 업데이트"""
+        if self.story_pages_list:
+            total_pages = len(self.story_pages_list)
+            self.current_page_idx = min(self.current_page_idx, total_pages - 1)
             
-        self.ui.chatList_2.clear()
+            self.storybookArea.setPageCount(total_pages)
+            self.storybookArea.setCurrentPage(self.current_page_idx)
+    
+    def updateStorybookDisplay(self):
+        """스토리북 내용 표시 업데이트"""
+        if self.story_pages_list and self.current_page_idx < len(self.story_pages_list):
+            segments = self.story_pages_list[self.current_page_idx]
+            story_text = " ".join(segments)
+            self.storybookArea.setStoryText(story_text)
+            
+            # 해당 페이지의 이미지가 있으면 표시
+            if self.current_page_idx in self.page_images:
+                self.storybookArea.setStoryImage(self.page_images[self.current_page_idx])
+            else:
+                self.storybookArea.clearImage()
+        else:
+            self.storybookArea.setStoryText("")
+            self.storybookArea.clearImage()
 
-        
-        
-        if page_idx >= 0 and page_idx < len(self.story_pages_list):
-            list_segment = self.story_pages_list[page_idx]
-            if len(list_segment) > 0:
-                for seg in list_segment:                   # already at most 4
-                    item = QListWidgetItem(seg)
-                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                    # 줄바꿈 추가
-                    item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
-                    self.ui.chatList_2.addItem(item)
-        
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

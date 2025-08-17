@@ -1,2 +1,2 @@
 llm:
-  engine: "phi3"       # "phi3" 또는 다른 모델
+  engine: "gpt"       # "phi3" 또는 다른 모델
