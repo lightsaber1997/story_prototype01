@@ -1,7 +1,26 @@
 import pyttsx3
+import platform
+from tts.voice_type import VoiceType
 
-def speech(text: str):
-    engine = pyttsx3.init()
-    engine.setProperty("rate", 160)  # 말하기 속도 조정
-    engine.say(text)                 # 전달받은 문자열 읽기
-    engine.runAndWait()              # 실행
+_engine = None
+
+def get_engine():
+    global _engine
+    if _engine is None:
+        _engine = pyttsx3.init()
+    return _engine
+
+def speech(text: str, voice: VoiceType, rate: int = 160):
+    engine = get_engine()
+    engine.setProperty("rate", rate)
+    voice_id = voice.get_id()
+    if voice_id:
+        engine.setProperty("voice", voice_id)
+    else:
+        print(f"[WARN] Voice ID not set for {platform.system()} / {voice}")
+    engine.say(text)
+    engine.runAndWait()
+
+# # Running Example
+# speech("Hello, this is an American male voice.", VoiceType.AMERICAN_MAN)
+# speech("Hello, this is an English female voice.", VoiceType.ENGLISH_WOMAN)
