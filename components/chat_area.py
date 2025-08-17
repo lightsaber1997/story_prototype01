@@ -5,7 +5,7 @@ from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QListWidget, QTextEdit, QPushButton,
     QListWidgetItem, QStyledItemDelegate, QGraphicsDropShadowEffect,
-    QHBoxLayout, QWidget
+    QHBoxLayout, QWidget, QSizePolicy
 )
 from PySide6.QtGui import QColor, QPainter, QPen, QBrush
 
@@ -85,15 +85,15 @@ class ChatMessageDelegate(QStyledItemDelegate):
         # panel.setGraphicsEffect(shadow)
         
         # layout = QVBoxLayout(panel)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(20)
+        # layout.setContentsMargins(20, 20, 20, 20)
+        # layout.setSpacing(20)
         
-        # 배경 그리기
+        # 배경 
         painter.setBrush(QBrush(bg_color))
         painter.setPen(QPen(QColor(0, 0, 0, 0)))
         painter.drawRoundedRect(bubble_rect, 18, 18)
         
-        # 테두리 그리기
+        # 테두리 
         border_color = QColor(0, 0, 0, 40)
         if message_type == "user":
             border_color = QColor(139, 69, 19, 80)
@@ -108,7 +108,7 @@ class ChatMessageDelegate(QStyledItemDelegate):
         painter.setPen(QPen(border_color, 2))
         painter.drawRoundedRect(bubble_rect, 18, 18)
         
-        # 텍스트 그리기
+        # 텍스트 
         painter.setPen(QPen(text_color))
         text_draw_rect = bubble_rect.adjusted(bubble_padding, bubble_padding, -bubble_padding, -bubble_padding)
         
@@ -171,17 +171,18 @@ class ChatArea(QFrame):
         
         self.setStyleSheet("""
             QFrame#chatArea {
-                # background-color: rgba(90, 119, 236, 0.5);
-                background-color: #ffca61;
+                background-image: url(assets/blue.png);
+                background-repeat: repeat;
+                background-position: center;
                 color: white;
-                border-left: 2px solid rgba(255, 255, 255, 0.2);
                 border-right: 2px solid rgba(255, 255, 255, 0.2);
                 padding: 0px;
                 margin: 0px;
                 border-radius: 0px;
             }
         """)
-        
+        # border-left: 2px solid rgba(255, 255, 255, 0.2);
+        # background-color: #ffca61;
         # 레이아웃 설정
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(15)
@@ -201,7 +202,7 @@ class ChatArea(QFrame):
             return {
                 "grad": ("#FFD08A", "#F5B04B"),  # 밝은 앰버 → 진한 앰버
                 "text": "#1F1300",
-                "border_mul": 0.88
+                "border_mul": 0.90
             }
         elif message_type == "story":
             # 밝은 스카이블루
@@ -227,7 +228,7 @@ class ChatArea(QFrame):
         wrapper = QWidget()
         wrapper.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         h = QHBoxLayout(wrapper)
-        h.setContentsMargins(8, 8, 8, 14)
+        h.setContentsMargins(8, 8, 8, 18)
         h.setSpacing(0)
 
         # 실제 말풍선 패널
@@ -270,10 +271,21 @@ class ChatArea(QFrame):
         v.setContentsMargins(16, 12, 16, 12)
         v.setSpacing(6)
         v.addWidget(label)
+        MAX_RATIO = 0.72
+        PAD_X = 16        # panel 좌/우 패딩
+        WRAP_M = 8 + 8    # wrapper 좌/우 마진 합
+        max_content_w = max(140, int(max_width * MAX_RATIO) - (PAD_X*2) - WRAP_M)
+        label.setWordWrap(True)
+        label.setMaximumWidth(max_content_w)
+        label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        # label.setFixedWidth(content_w)                    # ★ 라벨 폭 고정(줄바꿈 기준)
+        # panel.setFixedWidth(content_w + PAD_X*2)          # 패널 폭도 고정
+        # panel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
+        # wrapper.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         # 최대 폭 제한
-        panel.setMaximumWidth(int(max_width * 0.72))  # 리스트 폭의 ~68%
-        panel.setMinimumWidth(120)
+        # panel.setMaximumWidth(int(max_width * 0.72))  # 리스트 폭의 ~68%
+        # panel.setMinimumWidth(120)
 
         # 테두리 색: 그라데이션 중간색을 살짝 어둡게
         def _hex2rgb(hx): 
@@ -490,11 +502,14 @@ class ChatArea(QFrame):
         # 리스트 뷰 폭 기반으로 버블 생성
         viewport_w = self.chatList.viewport().width() or self.chatList.width()
         bubble = self._createBubbleWidget(text, role, viewport_w)
+        bubble.layout().activate()
+        bubble.adjustSize()
+
         size = bubble.sizeHint()
-        size.setHeight(size.height() + 6)
+        size.setHeight(size.height() + 14)
 
         # 높이 힌트 설정
-        bubble.resize(min(int(viewport_w * 0.72), bubble.sizeHint().width()), bubble.sizeHint().height())
+        # bubble.resize(min(int(viewport_w * 0.72), bubble.sizeHint().width()), bubble.sizeHint().height())
         item.setSizeHint(size)
 
         self.chatList.addItem(item)
