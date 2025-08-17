@@ -34,8 +34,10 @@ class StorybookArea(QFrame):
         
         self.setStyleSheet("""
             QFrame#storybookArea {
-                background: rgba(255, 255, 255, 1.0);
-                background-image: linear-gradient(90deg, rgba(227,227,227,1) 0%, rgba(247,247,247,0) 18%);
+                background: #ffffff;
+                background-image: url(assets/paper.jpg);
+                background-repeat: repeat;
+                background-position: center;
                 border-left: 2px solid rgba(200, 200, 200, 0.3);
                 padding: 0px;
                 margin: 0px;
@@ -91,7 +93,7 @@ class StorybookArea(QFrame):
         
         self.imageArea.setStyleSheet("""
             QLabel {
-                background: #FFFFFF;
+                background: transparent;
                 color: #7f8c8d;
                 font-size: 14px;
                 font-style: italic;
@@ -205,9 +207,11 @@ class StorybookArea(QFrame):
         self.textScrollArea = QScrollArea(self)
         self.textScrollArea.setObjectName("textScrollArea")
         self.textScrollArea.setWidgetResizable(True)
+        self.textScrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.textScrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.textScrollArea.setStyleSheet("""
             QScrollArea {
-                background: #FFFFFF;
+                background: transparent;
                 border: none;
                 margin: 0px 20px;
             }
@@ -242,7 +246,7 @@ class StorybookArea(QFrame):
                 color: #2A2935;
                 padding: 30px 40px;
                 line-height: 1.7;
-                background: #FFFFFF;
+                background: transparent;
                 text-align: justify;
                 font-family: 'Georgia', 'Times New Roman', serif;
                 font-size: 18px;
