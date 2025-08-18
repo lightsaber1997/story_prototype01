@@ -47,6 +47,7 @@ class ChatWorker(QObject):
             {"role": "user", "content": user_text},
         ]
         raw_json = self.engine.generate_reply(classify_prompt, max_new_tokens=128)
+        raw_json = self._nl2space(raw_json)
         print(raw_json)
 
         try:
@@ -57,7 +58,7 @@ class ChatWorker(QObject):
 
         # 2) Handle story path
         if data.get("kind") == "story":
-            fixed_line = data["fixed_line"].strip()
+            fixed_line = self._nl2space(data.get("fixed_line", ""))
             self.story.append(fixed_line)
             self.resultReady.emit({"type": "story_line", "text": fixed_line})
 
@@ -77,21 +78,32 @@ class ChatWorker(QObject):
                 },
                 {"role": "user", "content": story_context},
             ]
-            raw_next_line = self.engine.generate_reply(continue_prompt, max_new_tokens=120).strip()
+            raw_next_line = self.engine.generate_reply(continue_prompt, max_new_tokens=120)
+            raw_next_line = self._nl2space(raw_next_line)
             print(f"raw_next_line: {raw_next_line}")
 
             json_checked_output = format_helper.get_first_json(raw_next_line)
-            next_line = json_checked_output["first"] + json_checked_output["second"]
+            first = self._nl2space(json_checked_output.get("first", ""))
+            second = self._nl2space(json_checked_output.get("second", ""))
+            next_line = (first + " " + second).strip()
 
             self.story.append(next_line)
             self.resultReady.emit({"type": "ai_suggestion", "text": next_line})
 
         else:
-            answer = data["answer"].strip()
+            answer = self._nl2space(data.get("answer", ""))
             print(f"answer {answer}")
             self.resultReady.emit({"type": "chat_answer", "text": answer + " What’s your next line?"})
 
-
+    @staticmethod
+    def _nl2space(s: str) -> str:
+        """Replace actual newlines and literal '\n' with spaces, then collapse multiple spaces into one."""
+        if not isinstance(s, str):
+            return s
+        s = re.sub(r'[\r\n]+', ' ', s)
+        s = s.replace("\\n", " ")
+        s = re.sub(r' {2,}', ' ', s)
+        return s.strip()
 # ════════════════════════════════════════════════════════════════════
 # ChatController (thread wrapper)
 # ════════════════════════════════════════════════════════════════════

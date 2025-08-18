@@ -11,6 +11,7 @@ from PySide6.QtGui import QPalette, QBrush, QColor
 from components.navigation_bar import NavigationBar
 from components.chat_area import ChatArea
 from components.storybook_area import StorybookArea
+from components.settings_dialog import SettingsDialog
 
 # AI 엔진 임포트
 from engines.phi3_mini_engine import Phi3MiniEngine
@@ -75,8 +76,6 @@ class MainApp(QMainWindow):
     def setupAI(self):
         """AI 엔진 설정"""
         try:
-            # from engines.chat_gpt_engine import ChatGPTEngine
-            # self.llm_engine = ChatGPTEngine()
             # llm 모델 가져오기 (phi3_mini 활용)
             from core.llm_factory import get_llm_engine
             self.llm_engine = get_llm_engine()
@@ -85,9 +84,9 @@ class MainApp(QMainWindow):
             # 이미지 생성 엔진
             self.image_gen_engine = StableV15Engine()
             self.image_gen_controller = ImageGenController(
-                self._on_image_gen_ready, 
+                self._on_image_gen_ready,
                 self.image_gen_engine)
-            
+
             print("AI 엔진 초기화 완료")
         except Exception as e:
             print(f"AI 엔진 초기화 실패: {e}")
@@ -130,8 +129,20 @@ class MainApp(QMainWindow):
     def onSettingsClicked(self):
         """설정 버튼 클릭"""
         self.navigationBar.setActiveButton("settings")
-        QMessageBox.information(self, "설정", "설정 기능이 구현될 예정입니다.")
-    
+        dlg = SettingsDialog(
+            None,
+            current_rate=self.storybookArea.tts_rate,
+            current_mode=self.storybookArea.tts_mode,
+            current_animated=self.storybookArea.typing_animated,
+            current_interval=self.storybookArea.typing_interval,
+            current_by_word=self.storybookArea.typing_by_word
+        )
+        if dlg.exec():
+            values = dlg.get_values()
+            # 각각 적용
+            self.storybookArea.applyTTSSettings(values["rate"], values["mode"])
+            self.storybookArea.applyTypewriterSettings(values["animated"], values["interval"], values["by_word"])
+
     def onHelpClicked(self):
         """도움말 버튼 클릭"""
         self.navigationBar.setActiveButton("help")
@@ -176,12 +187,12 @@ class MainApp(QMainWindow):
         if kind == "story_line":
             # AI 문법 수정 메시지
             self.chatArea.addMessage(f"문법 수정: {text}", is_user=False, message_type="correction")
-            self._append_to_story(text + " ")
+            self._append_to_story(text.strip())
 
         elif kind == "ai_suggestion":
             # AI 스토리 제안 메시지
             self.chatArea.addMessage(text, is_user=False, message_type="story")
-            self._append_to_story(text + " ")
+            self._append_to_story(text.strip())
 
         elif kind == "chat_answer":
             # AI 일반 답변 메시지
@@ -217,6 +228,7 @@ class MainApp(QMainWindow):
     
     def _append_to_story(self, segment: str) -> None:
         """스토리 세그먼트 추가"""
+        segment = segment.strip()
         self.story_parts.append(segment)
         self._add_to_story_pages_list(segment)
         print(f"story_pages_list: {self.story_pages_list}")
@@ -272,7 +284,7 @@ class MainApp(QMainWindow):
         """스토리북 내용 표시 업데이트"""
         if self.story_pages_list and self.current_page_idx < len(self.story_pages_list):
             segments = self.story_pages_list[self.current_page_idx]
-            story_text = " ".join(segments)
+            story_text = " ".join(s.strip() for s in segments if s and s.strip())
             self.storybookArea.setStoryText(story_text)
             
             # 해당 페이지의 이미지가 있으면 표시
