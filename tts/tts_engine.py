@@ -4,15 +4,15 @@ from PySide6.QtCore import QThread, Signal
 from tts.voice_type import VoiceType
 
 class TTSWorker(QThread):
-    """QThread 기반 비동기 TTS 실행기"""
+    """Asynchronous TTS runner based on QThread"""
     finished = Signal()
     error = Signal(str)
 
-    _engine = None  # 클래스 레벨 공유 엔진 (싱글톤)
+    _engine = None  # Shared class-level engine (singleton)
 
     @classmethod
     def _get_engine(cls):
-        """공용 pyttsx3 엔진 반환"""
+        """Return the shared pyttsx3 engine instance"""
         if cls._engine is None:
             cls._engine = pyttsx3.init()
         return cls._engine

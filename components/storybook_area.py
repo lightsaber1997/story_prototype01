@@ -283,7 +283,7 @@ class StorybookArea(QFrame):
         self.btnPrevPage.setFixedSize(35, 35)
         self.btnPrevPage.setToolTip("이전 페이지")
 
-        # 읽어주기 버튼 (🔊)
+        # Read Aloud Button (🔊)
         self.btnReadAloud = QPushButton("🔊", self.pageNavFrame)
         self.btnReadAloud.setObjectName("btnReadAloud")
         self.btnReadAloud.setFixedSize(35, 35)
@@ -367,7 +367,7 @@ class StorybookArea(QFrame):
         """시그널 연결"""
         self.btnPrevPage.clicked.connect(self.previousPage)
         self.btnNextPage.clicked.connect(self.nextPage)
-        self.btnReadAloud.clicked.connect(self.readAloud)  # 추가
+        self.btnReadAloud.clicked.connect(self.readAloud)
 
 
 
@@ -385,22 +385,22 @@ class StorybookArea(QFrame):
             self.updatePageDisplay()
             self.pageChanged.emit(self.current_page)
 
-    def setStoryText(self, new_text: str, force_restart: bool=False):
+    def setStoryText(self, new_text: str, force_restart: bool = False):
         """
-        - 같은 페이지에서 누적되면 update()만 호출(증분 타이핑)
-        - 페이지 변경/강제 시 전체 리스타트
-        - 필요 시 스크롤 초기화 옵션 유지
+        - If on the same page and text is growing, call update() (incremental typing)
+        - On page change or forced restart, start from the beginning
+        - Reset scroll only when forced restart or page change
         """
         if not self._current_full_text:
             force_restart = True
         is_prefix_grow = new_text.startswith(getattr(self, "_current_full_text", ""))
-        # 스크롤은 '강제 리스타트'나 '페이지 변경'일 때만 초기화 (선택)
+        # Reset scroll only for forced restart or page change
         if force_restart or not is_prefix_grow:
-            # 필요하다면 스크롤 초기화
+            # Reset scroll if available
             if hasattr(self, "textScrollArea"):
                 bar = self.textScrollArea.verticalScrollBar()
                 bar.setValue(bar.minimum())
-            # 전체 리스타트
+            # Full restart
             self._typer.start(
                 label=self.textContent,
                 text=new_text,
@@ -408,16 +408,16 @@ class StorybookArea(QFrame):
                 by_word=self.typing_by_word
             )
         else:
-            # 증분 업데이트 (애니메이션 off면 즉시 출력)
+            # Incremental update (immediate output if animation is off)
             if self.typing_animated:
                 self._typer.update(new_text)
             else:
-                # 애니메이션 비활성: 즉시 반영
+                # Animation disabled: apply immediately
                 if hasattr(self._typer, "stop"):
                     self._typer.stop()
                 self.textContent.setText(new_text)
         self._current_full_text = new_text
-    
+
     def setStoryImage(self, image_path: str):
         """스토리 이미지 설정"""
         try:
@@ -481,7 +481,7 @@ class StorybookArea(QFrame):
         return self.total_pages
 
     def getStoryText(self) -> str:
-        """현재 스토리 텍스트 반환"""
+        """Return the current story text"""
         return self.textContent.text()
 
     def applyTTSSettings(self, rate: int, mode: VoiceType):
@@ -495,16 +495,16 @@ class StorybookArea(QFrame):
         self.typing_by_word = by_word
 
     def readAloud(self):
-        """Run TTS asynchronously in a QThread with current settings"""
+        """Run TTS in a QThread with the current settings"""
         text = self.textContent.text().strip()
         if not text:
             print("[StorybookArea] No text to read.")
             return
 
-        # 기존에 실행 중인 worker가 있다면 정리
+        # Clean up existing worker if one is already running
         if self.tts_worker and self.tts_worker.isRunning():
             self.tts_worker.terminate()
             self.tts_worker.wait()
-        # 새로운 worker 시작
+        # Start a new worker
         self.tts_worker = TTSWorker(text, self.tts_mode, self.tts_rate)
         self.tts_worker.start()
