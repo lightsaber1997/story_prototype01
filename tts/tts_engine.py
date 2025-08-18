@@ -1,25 +1,41 @@
 import pyttsx3
 import platform
+from PySide6.QtCore import QThread, Signal
 from tts.voice_type import VoiceType
 
-_engine = None
+class TTSWorker(QThread):
+    """QThread 기반 비동기 TTS 실행기"""
+    finished = Signal()
+    error = Signal(str)
 
-def get_engine():
-    global _engine
-    if _engine is None:
-        _engine = pyttsx3.init()
-    return _engine
+    _engine = None  # 클래스 레벨 공유 엔진 (싱글톤)
 
-def tts_speak(text: str, voice: VoiceType, rate: int = 160):
-    engine = get_engine()
-    engine.setProperty("rate", rate)
-    voice_id = voice.voice_id
-        engine.setProperty("voice", voice_id)
-    else:
-        print(f"[WARN] Voice ID not set for {platform.system()} / {voice}")
-    engine.say(text)
-    engine.runAndWait()
+    @classmethod
+    def _get_engine(cls):
+        """공용 pyttsx3 엔진 반환"""
+        if cls._engine is None:
+            cls._engine = pyttsx3.init()
+        return cls._engine
 
-# # Running Example
-# speech("Hello, this is an American male voice.", VoiceType.AMERICAN_MAN)
-# speech("Hello, this is an English female voice.", VoiceType.ENGLISH_WOMAN)
+    def __init__(self, text: str, mode: VoiceType, rate: int = 160):
+        super().__init__()
+        self.text = text
+        self.mode = mode
+        self.rate = rate
+
+    def run(self):
+        try:
+            engine = self._get_engine()
+            engine.setProperty("rate", self.rate)
+
+            voice_id = self.mode.voice_id
+            if voice_id:
+                engine.setProperty("voice", voice_id)
+            else:
+                print(f"[WARN] Voice ID not set for {platform.system()} / {self.mode}")
+
+            engine.say(self.text)
+            engine.runAndWait()
+            self.finished.emit()
+        except Exception as e:
+            self.error.emit(str(e))

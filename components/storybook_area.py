@@ -5,6 +5,9 @@ from PySide6.QtGui import QFont, QPixmap
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
                                QPushButton, QScrollArea)
 from pathlib import Path
+from components.fx.typewriter_effect import TypewriterEffect
+from tts.voice_type import VoiceType
+from tts.tts_engine import TTSWorker
 
 class StorybookArea(QFrame):
     # 시그널 정의
@@ -17,7 +20,17 @@ class StorybookArea(QFrame):
         self.total_pages = 1
         self.setupUI()
         self.connectSignals()
-    
+        # Typewriter
+        self._typer = TypewriterEffect(self)
+        self._current_full_text = ""
+        self.typing_animated = True
+        self.typing_interval = 30
+        self.typing_by_word = False
+        # TTS
+        self.tts_worker = None
+        self.tts_rate = 160
+        self.tts_mode = VoiceType.AMERICAN_MAN
+
     def _get_relative_font_size(self, base_size):
         """DPI에 따른 상대적 폰트 크기 계산"""
         from PySide6.QtWidgets import QApplication
@@ -265,7 +278,13 @@ class StorybookArea(QFrame):
         self.btnPrevPage.setObjectName("btnPrevPage")
         self.btnPrevPage.setFixedSize(35, 35)
         self.btnPrevPage.setToolTip("이전 페이지")
-        
+
+        # 읽어주기 버튼 (🔊)
+        self.btnReadAloud = QPushButton("🔊", self.pageNavFrame)
+        self.btnReadAloud.setObjectName("btnReadAloud")
+        self.btnReadAloud.setFixedSize(35, 35)
+        self.btnReadAloud.setToolTip("텍스트 읽어주기")
+
         # 다음 페이지 버튼
         self.btnNextPage = QPushButton("›", self.pageNavFrame)
         self.btnNextPage.setObjectName("btnNextPage")
@@ -344,9 +363,10 @@ class StorybookArea(QFrame):
         """시그널 연결"""
         self.btnPrevPage.clicked.connect(self.previousPage)
         self.btnNextPage.clicked.connect(self.nextPage)
-    
+        self.btnReadAloud.clicked.connect(self.readAloud)  # 추가
 
-    
+
+
     def setPageCount(self, total_pages: int):
         """총 페이지 수 설정"""
         self.total_pages = max(1, total_pages)
@@ -360,10 +380,39 @@ class StorybookArea(QFrame):
             self.current_page = page
             self.updatePageDisplay()
             self.pageChanged.emit(self.current_page)
-    
-    def setStoryText(self, text: str):
-        """스토리 텍스트 설정"""
-        self.textContent.setText(text)
+
+    def setStoryText(self, new_text: str, force_restart: bool=False):
+        """
+        - 같은 페이지에서 누적되면 update()만 호출(증분 타이핑)
+        - 페이지 변경/강제 시 전체 리스타트
+        - 필요 시 스크롤 초기화 옵션 유지
+        """
+        if not self._current_full_text:
+            force_restart = True
+        is_prefix_grow = new_text.startswith(getattr(self, "_current_full_text", ""))
+        # 스크롤은 '강제 리스타트'나 '페이지 변경'일 때만 초기화 (선택)
+        if force_restart or not is_prefix_grow:
+            # 필요하다면 스크롤 초기화
+            if hasattr(self, "textScrollArea"):
+                bar = self.textScrollArea.verticalScrollBar()
+                bar.setValue(bar.minimum())
+            # 전체 리스타트
+            self._typer.start(
+                label=self.textContent,
+                text=new_text,
+                base_interval=self.typing_interval,
+                by_word=self.typing_by_word
+            )
+        else:
+            # 증분 업데이트 (애니메이션 off면 즉시 출력)
+            if self.typing_animated:
+                self._typer.update(new_text)
+            else:
+                # 애니메이션 비활성: 즉시 반영
+                if hasattr(self._typer, "stop"):
+                    self._typer.stop()
+                self.textContent.setText(new_text)
+        self._current_full_text = new_text
     
     def setStoryImage(self, image_path: str):
         """스토리 이미지 설정"""
@@ -396,6 +445,8 @@ class StorybookArea(QFrame):
     def previousPage(self):
         """이전 페이지로 이동"""
         if self.current_page > 0:
+            if hasattr(self, "_typer"):
+                self._typer.stop()
             self.current_page -= 1
             self.updatePageDisplay()
             self.pageChanged.emit(self.current_page)
@@ -403,6 +454,8 @@ class StorybookArea(QFrame):
     def nextPage(self):
         """다음 페이지로 이동"""
         if self.current_page < self.total_pages - 1:
+            if hasattr(self, "_typer"):
+                self._typer.stop()
             self.current_page += 1
             self.updatePageDisplay()
             self.pageChanged.emit(self.current_page)
@@ -415,20 +468,6 @@ class StorybookArea(QFrame):
         self.btnPrevPage.setEnabled(self.current_page > 0)
         self.btnNextPage.setEnabled(self.current_page < self.total_pages - 1)
     
-    def setPageCount(self, total_pages: int):
-        """총 페이지 수 설정"""
-        self.total_pages = max(1, total_pages)
-        if self.current_page >= self.total_pages:
-            self.current_page = self.total_pages - 1
-        self.updatePageDisplay()
-    
-    def setCurrentPage(self, page: int):
-        """현재 페이지 설정"""
-        if 0 <= page < self.total_pages:
-            self.current_page = page
-            self.updatePageDisplay()
-            self.pageChanged.emit(self.current_page)
-    
     def getCurrentPage(self):
         """현재 페이지 번호 반환"""
         return self.current_page
@@ -436,3 +475,32 @@ class StorybookArea(QFrame):
     def getTotalPages(self):
         """총 페이지 수 반환"""
         return self.total_pages
+
+    def getStoryText(self) -> str:
+        """현재 스토리 텍스트 반환"""
+        return self.textContent.text()
+
+    def applyTTSSettings(self, rate: int, mode: VoiceType):
+        """Apply TTS settings from settings dialog"""
+        self.tts_rate = rate
+        self.tts_mode = mode
+
+    def applyTypewriterSettings(self, animated: bool, interval: int, by_word: bool):
+        self.typing_animated = animated
+        self.typing_interval = interval
+        self.typing_by_word = by_word
+
+    def readAloud(self):
+        """Run TTS asynchronously in a QThread with current settings"""
+        text = self.textContent.text().strip()
+        if not text:
+            print("[StorybookArea] No text to read.")
+            return
+
+        # 기존에 실행 중인 worker가 있다면 정리
+        if self.tts_worker and self.tts_worker.isRunning():
+            self.tts_worker.terminate()
+            self.tts_worker.wait()
+        # 새로운 worker 시작
+        self.tts_worker = TTSWorker(text, self.tts_mode, self.tts_rate)
+        self.tts_worker.start()
