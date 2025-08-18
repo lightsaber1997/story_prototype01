@@ -9,7 +9,7 @@ from tts.voice_type import VoiceType
 
 class SettingsDialog(QDialog):
     def __init__(self, parent=None,
-                 current_rate=200, current_mode=VoiceType.AMERICAN_MAN,
+                 current_rate=200, current_mode=VoiceType.AMERICAN_WOMAN,
                  current_animated=True, current_interval=30, current_by_word=False):
         super().__init__(parent)
         self.setWindowTitle("Settings")

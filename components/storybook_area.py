@@ -29,7 +29,7 @@ class StorybookArea(QFrame):
         # TTS
         self.tts_worker = None
         self.tts_rate = 160
-        self.tts_mode = VoiceType.AMERICAN_MAN
+        self.tts_mode = VoiceType.AMERICAN_WOMAN
 
     def _get_relative_font_size(self, base_size):
         """DPI에 따른 상대적 폰트 크기 계산"""
