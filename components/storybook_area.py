@@ -47,8 +47,10 @@ class StorybookArea(QFrame):
         
         self.setStyleSheet("""
             QFrame#storybookArea {
-                background: rgba(255, 255, 255, 1.0);
-                background-image: linear-gradient(90deg, rgba(227,227,227,1) 0%, rgba(247,247,247,0) 18%);
+                background: #ffffff;
+                background-image: url(assets/paper.jpg);
+                background-repeat: repeat;
+                background-position: center;
                 border-left: 2px solid rgba(200, 200, 200, 0.3);
                 padding: 0px;
                 margin: 0px;
@@ -104,7 +106,7 @@ class StorybookArea(QFrame):
         
         self.imageArea.setStyleSheet("""
             QLabel {
-                background: #FFFFFF;
+                background: transparent;
                 color: #7f8c8d;
                 font-size: 14px;
                 font-style: italic;
@@ -115,13 +117,13 @@ class StorybookArea(QFrame):
         # 텍스트 영역 (스크롤 가능)
         self.createTextArea()
         
-        # 페이지 네비게이션 (책 스타일)
+        # 페이지 네비게이션
         self.createBookPageNavigation()
         
         # 레이아웃에 컴포넌트 추가
         self.layout.addWidget(self.storybookTitle)
         self.layout.addWidget(self.imageArea)
-        self.layout.addWidget(self.textScrollArea, 1)  # 확장 가능
+        self.layout.addWidget(self.textScrollArea, 1)
         self.layout.addWidget(self.pageNavFrame)
     
     def createPageNavigation(self):
@@ -218,9 +220,11 @@ class StorybookArea(QFrame):
         self.textScrollArea = QScrollArea(self)
         self.textScrollArea.setObjectName("textScrollArea")
         self.textScrollArea.setWidgetResizable(True)
+        self.textScrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.textScrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.textScrollArea.setStyleSheet("""
             QScrollArea {
-                background: #FFFFFF;
+                background: transparent;
                 border: none;
                 margin: 0px 20px;
             }
@@ -245,7 +249,7 @@ class StorybookArea(QFrame):
         self.textContent.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self.textContent.setText("")
         
-        # 책 스타일 텍스트 폰트 및 스타일
+        # 텍스트 폰트 
         font_content = QFont()
         font_content.setFamilies(["Georgia", "Times New Roman", "serif"])  
         font_content.setPointSize(self._get_relative_font_size(18))  
@@ -255,7 +259,7 @@ class StorybookArea(QFrame):
                 color: #2A2935;
                 padding: 30px 40px;
                 line-height: 1.7;
-                background: #FFFFFF;
+                background: transparent;
                 text-align: justify;
                 font-family: 'Georgia', 'Times New Roman', serif;
                 font-size: 18px;
@@ -265,7 +269,7 @@ class StorybookArea(QFrame):
         self.textScrollArea.setWidget(self.textContent)
     
     def createBookPageNavigation(self):
-        """책 스타일의 페이지 네비게이션 생성"""
+        """페이지 네비게이션 생성"""
         self.pageNavFrame = QFrame(self)
         self.pageNavFrame.setObjectName("pageNavFrame")
         self.pageNavFrame.setFixedHeight(60)
