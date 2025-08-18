@@ -10,11 +10,10 @@ def get_engine():
         _engine = pyttsx3.init()
     return _engine
 
-def speech(text: str, voice: VoiceType, rate: int = 160):
+def tts_speak(text: str, voice: VoiceType, rate: int = 160):
     engine = get_engine()
     engine.setProperty("rate", rate)
-    voice_id = voice.get_id()
-    if voice_id:
+    voice_id = voice.voice_id
         engine.setProperty("voice", voice_id)
     else:
         print(f"[WARN] Voice ID not set for {platform.system()} / {voice}")
