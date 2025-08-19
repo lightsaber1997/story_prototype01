@@ -488,7 +488,9 @@ class StorybookArea(QFrame):
     def updatePageDisplay(self):
         """페이지 표시 업데이트"""
         self.pageNumber.setText(str(self.current_page + 1))
-        
+        # Chapter 제목 업데이트
+        self.storybookTitle.setText(f"CHAPTER {self.current_page + 1}")
+    
         # 버튼 활성화/비활성화
         self.btnPrevPage.setEnabled(self.current_page > 0)
         self.btnNextPage.setEnabled(self.current_page < self.total_pages - 1)
