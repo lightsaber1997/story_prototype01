@@ -27,19 +27,23 @@ class ImageGenWorker(QObject):
         self.engine = engine
 
     @Slot(str)
-    def doWork(self, prompt: str):
+    def doWork(self, payload: dict):
         try:
+            prompt = payload["prompt"]
+            page_idx = payload.get("page_idx", 0)
             image = self.engine.generate_image(prompt)
             self.resultReady.emit({
                 "type": "image_generated",
                 "image": image,
-                "prompt": prompt
+                "prompt": prompt,
+                "page_idx": page_idx
             })
         except Exception as e:
             print(f"[ImageGenWorker] Error generating image: {e}")
             self.resultReady.emit({
                 "type": "error",
-                "error": str(e)
+                "error": str(e),
+                "page_idx": payload.get("page_idx", 0)
             })
 
 
@@ -47,7 +51,7 @@ class ImageGenWorker(QObject):
 # ImageGenController (thread wrapper)
 # ════════════════════════════════════════════════════════════════════
 class ImageGenController(QObject):
-    operate = Signal(str)  # accepts the prompt string
+    operate = Signal(dict)  # prompt + page_idx 같이 딕셔너리 전달
 
     def __init__(self, result_callback, engine):  # engine: StableV15Engine
         super().__init__()
