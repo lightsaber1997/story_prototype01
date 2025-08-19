@@ -8,7 +8,7 @@ from pathlib import Path
 from components.fx.typewriter_effect import TypewriterEffect
 from tts.voice_type import VoiceType
 from tts.tts_controller import TTSController
-from components.export_simple_storybook import export_simple_pdf
+from components.export_storybook import export_to_pdf
 from datetime import datetime
 
 class StorybookArea(QFrame):
@@ -577,4 +577,4 @@ class StorybookArea(QFrame):
         )
         if not filename:
             return
-        export_simple_pdf(self, filename)
+        export_to_pdf(self, filename)

@@ -2,7 +2,7 @@ from PySide6.QtGui import QPdfWriter, QPainter, QPageSize, QFont, QPixmap, QBrus
 from PySide6.QtCore import QRectF, Qt, QSizeF
 from pathlib import Path
 
-def export_simple_pdf(storybook, filename: str) -> None:
+def export_to_pdf(storybook, filename: str) -> None:
     """Export all storybook pages as a simple PDF with title, image, and text."""
 
     writer = QPdfWriter(filename)
