@@ -29,8 +29,7 @@ class MainApp(QMainWindow):
         self.connectSignals()
         
         # 스토리 관리 변수들
-        self.current_page_idx = 0        # 사용자가 보고 있는 페이지
-
+        self.current_page_idx = 0
         self.story_pages_list = []  # 각 페이지별 스토리 세그먼트들
         self.page_images: Dict[int, str] = {}  # 각 페이지별 생성된 이미지
         self.story_parts: List[str] = []
@@ -222,11 +221,12 @@ class MainApp(QMainWindow):
         elif payload["type"] == "error":
             QMessageBox.critical(self, "이미지 생성 오류", f"이미지 생성에 실패했습니다:\n{payload['error']}")
     
+    
     # ========== 스토리 관리 ==========
     def _append_to_story(self, segment: str) -> None:
         segment = segment.strip()
         self.story_parts.append(segment)
-        self._add_to_story_pages_list(segment)  # 페이지 분할 관리
+        self._add_to_story_pages_list(segment)
 
         # 항상 최신 페이지로 이동
         self.current_page_idx = len(self.story_pages_list) - 1
@@ -251,7 +251,7 @@ class MainApp(QMainWindow):
 
 
     def _add_to_story_pages_list(self, segment: str, num_page_segment: int = 4) -> bool:
-        """스토리 세그먼트를 페이지별로 관리. 새 페이지가 생성되면 True 반환."""
+        """스토리 세그먼트를 페이지별로 관리"""
         if not self.story_pages_list:
             self.story_pages_list.append([segment])
             return True  # 첫 페이지 생성
@@ -303,6 +303,7 @@ class MainApp(QMainWindow):
             self.storybookArea.setCurrentPage(self.current_page_idx)
     
     def updateStorybookDisplay(self):
+        """스토리북 내용 표시 업데이트"""
         if self.story_pages_list and self.current_page_idx < len(self.story_pages_list):
             segments = self.story_pages_list[self.current_page_idx]
             story_text = " ".join(s.strip() for s in segments if s and s.strip())
