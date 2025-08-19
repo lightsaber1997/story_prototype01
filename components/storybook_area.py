@@ -3,11 +3,13 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QPixmap
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
-                               QPushButton, QScrollArea)
+                               QPushButton, QScrollArea, QFileDialog)
 from pathlib import Path
 from components.fx.typewriter_effect import TypewriterEffect
 from tts.voice_type import VoiceType
 from tts.tts_controller import TTSController
+from utils.export_pdf import export_storybook
+from datetime import datetime
 
 class StorybookArea(QFrame):
     # 시그널 정의
@@ -361,6 +363,10 @@ class StorybookArea(QFrame):
         self.pageNavLayout.addWidget(self.pageNumber)
         self.pageNavLayout.addWidget(self.btnNextPage)
         self.pageNavLayout.addStretch()
+
+        self.btnExportPDF = QPushButton("📄", self.pageNavFrame)
+        self.btnExportPDF.setToolTip("Export storybook as PDF")
+        self.pageNavLayout.addWidget(self.btnExportPDF)
     
 
     
@@ -372,6 +378,7 @@ class StorybookArea(QFrame):
         self.tts_controller.worker.started.connect(self._onTTSStarted)
         self.tts_controller.worker.finished.connect(self._onTTSFinished)
         self.tts_controller.worker.error.connect(self._onTTSError)
+        self.btnExportPDF.clicked.connect(self.saveAllPagesAsPDF)
 
 
 
@@ -555,3 +562,19 @@ class StorybookArea(QFrame):
         print(f"[StorybookArea] TTS error: {message}")
         self.btnReadAloud.setText("🔊")
         self.btnReadAloud.setToolTip("Read text aloud")
+
+    def saveAllPagesAsPDF(self):
+        """Open save dialog and export all pages into a single PDF (with images + text)."""
+        # 현재 날짜/시간을 파일명에 반영
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        default_name = f"storybook_{timestamp}.pdf"
+
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export PDF",
+            default_name,  # 기본 파일명에 날짜/시간 포함
+            "PDF Files (*.pdf)"
+        )
+        if not filename:
+            return
+        export_storybook(self, filename)
