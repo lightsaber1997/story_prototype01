@@ -20,7 +20,7 @@ import format_helper
 class ImageGenWorker(QObject):
     """Handles image generation in a background thread."""
 
-    resultReady = Signal(dict)  # keys: type, image (PIL.Image), prompt (str)
+    resultReady = Signal(dict)  # keys: type, image (PIL.Image), prompt (str), page_idx (int)
 
     def __init__(self, engine):  # engine: StableV15Engine
         super().__init__()
@@ -51,7 +51,7 @@ class ImageGenWorker(QObject):
 # ImageGenController (thread wrapper)
 # ════════════════════════════════════════════════════════════════════
 class ImageGenController(QObject):
-    operate = Signal(dict)  # prompt + page_idx 같이 딕셔너리 전달
+    operate = Signal(dict)   # prompt + page_idx dict
 
     def __init__(self, result_callback, engine):  # engine: StableV15Engine
         super().__init__()

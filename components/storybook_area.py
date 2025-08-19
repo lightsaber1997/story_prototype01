@@ -504,43 +504,52 @@ class StorybookArea(QFrame):
     def getStoryText(self) -> str:
         """Return the current story text"""
         return self.textContent.text()
-
+    
     def applyTTSSettings(self, rate: int, mode: VoiceType):
-        """Apply TTS settings from settings dialog"""
+        """Apply TTS settings from the settings dialog"""
         self.tts_rate = rate
         self.tts_mode = mode
 
     def applyTypewriterSettings(self, animated: bool, interval: int, by_word: bool):
+        """Apply typewriter effect settings (animation, interval, by word/character)"""
         self.typing_animated = animated
         self.typing_interval = interval
         self.typing_by_word = by_word
 
     def readAloud(self):
+        """Toggle TTS playback for the current text"""
         if self.tts_controller.is_running():
+            # If already running, stop playback
             self.stopTTS()
             return
 
+        # Retrieve text either from QTextEdit (toPlainText) or QLabel (text)
         getter = getattr(self.textContent, "toPlainText", None)
         text = (getter() if callable(getter) else self.textContent.text()).strip()
         if not text:
             print("[StorybookArea] No text to read.")
             return
 
+        # Start playback with current TTS settings
         self.tts_controller.start(text, self.tts_mode, self.tts_rate)
 
     def stopTTS(self):
+        """Stop TTS playback"""
         self.tts_controller.stop()
-        # 버튼 복구는 finished 이벤트에서 처리
+        # Button UI reset is handled in the finished event
 
     def _onTTSStarted(self):
+        """Update button when TTS playback starts"""
         self.btnReadAloud.setText("⏹")
-        self.btnReadAloud.setToolTip("읽기 중단")
+        self.btnReadAloud.setToolTip("Stop reading")
 
     def _onTTSFinished(self):
+        """Update button when TTS playback finishes"""
         self.btnReadAloud.setText("🔊")
-        self.btnReadAloud.setToolTip("텍스트 읽어주기")
+        self.btnReadAloud.setToolTip("Read text aloud")
 
     def _onTTSError(self, message: str):
+        """Handle TTS errors and reset button state"""
         print(f"[StorybookArea] TTS error: {message}")
         self.btnReadAloud.setText("🔊")
-        self.btnReadAloud.setToolTip("텍스트 읽어주기")
+        self.btnReadAloud.setToolTip("Read text aloud")
