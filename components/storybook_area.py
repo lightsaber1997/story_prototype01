@@ -57,7 +57,6 @@ class StorybookArea(QFrame):
                 border-left: 2px solid rgba(200, 200, 200, 0.3);
                 padding: 0px;
                 margin: 0px;
-                box-shadow: 0 0 50px rgba(0, 0, 0, 0.2);
             }
         """)
         
@@ -141,12 +140,16 @@ class StorybookArea(QFrame):
         self.btnPrevPage.setObjectName("btnPrevPage")
         self.btnPrevPage.setFixedSize(45, 45)
         self.btnPrevPage.setToolTip("이전 페이지")
+        self.btnPrevPage.setCursor(Qt.PointingHandCursor)
+
         
         # 다음 페이지 버튼
         self.btnNextPage = QPushButton("▶", self.pageNavFrame)
         self.btnNextPage.setObjectName("btnNextPage")
         self.btnNextPage.setFixedSize(45, 45)
         self.btnNextPage.setToolTip("다음 페이지")
+        self.btnNextPage.setCursor(Qt.PointingHandCursor)
+
         
         # 페이지 라벨
         self.pageLabel = QLabel("1 / 1", self.pageNavFrame)
@@ -291,6 +294,8 @@ class StorybookArea(QFrame):
         self.btnReadAloud.setObjectName("btnReadAloud")
         self.btnReadAloud.setFixedSize(35, 35)
         self.btnReadAloud.setToolTip("텍스트 읽어주기")
+        self.btnReadAloud.setCursor(Qt.PointingHandCursor)
+
 
         # 다음 페이지 버튼
         self.btnNextPage = QPushButton("›", self.pageNavFrame)
@@ -367,6 +372,8 @@ class StorybookArea(QFrame):
         self.btnExportPDF = QPushButton("📄", self.pageNavFrame)
         self.btnExportPDF.setToolTip("Export storybook as PDF")
         self.pageNavLayout.addWidget(self.btnExportPDF)
+        self.btnExportPDF.setCursor(Qt.PointingHandCursor)
+
     
 
     

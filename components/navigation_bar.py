@@ -23,7 +23,7 @@ class NavigationBar(QFrame):
         # 스타일 설정 - main_ui_colorful.py의 메인 배경색 적용
         self.setStyleSheet("""
             QFrame#navigationBar {
-                background-color: #172261;
+                background-color: #0c192e;
                 padding: 0px;
                 margin: 0px;
             }
@@ -67,6 +67,7 @@ class NavigationBar(QFrame):
         self.btnHome.setIcon(QIcon("assets/icon/home.svg"))
         self.btnHome.setIconSize(QSize(22, 22))
         self.btnHome.setStyleSheet(button_style)
+        self.btnHome.setCursor(Qt.PointingHandCursor)
 
         # 새 스토리 버튼
         self.btnNewStory = QPushButton(" New Story", self)
@@ -75,6 +76,8 @@ class NavigationBar(QFrame):
         self.btnNewStory.setIcon(QIcon("assets/icon/chat.svg"))
         self.btnNewStory.setIconSize(QSize(22, 22))
         self.btnNewStory.setStyleSheet(button_style)
+        self.btnNewStory.setCursor(Qt.PointingHandCursor)
+
 
         # 저장된 스토리 버튼
         self.btnSavedStories = QPushButton(" List", self)
@@ -83,6 +86,8 @@ class NavigationBar(QFrame):
         self.btnSavedStories.setIcon(QIcon("assets/icon/book.svg"))
         self.btnSavedStories.setIconSize(QSize(22, 22))
         self.btnSavedStories.setStyleSheet(button_style)
+        self.btnSavedStories.setCursor(Qt.PointingHandCursor)
+
         
         # 설정 버튼
         self.btnSettings = QPushButton(" Settings", self)
@@ -91,6 +96,8 @@ class NavigationBar(QFrame):
         self.btnSettings.setIcon(QIcon("assets/icon/setting.svg"))
         self.btnSettings.setIconSize(QSize(22, 22))
         self.btnSettings.setStyleSheet(button_style)
+        self.btnSettings.setCursor(Qt.PointingHandCursor)
+
         
         # 도움말 버튼
         self.btnHelp = QPushButton(" Help", self)
@@ -99,9 +106,8 @@ class NavigationBar(QFrame):
         self.btnHelp.setIcon(QIcon("assets/icon/help.svg"))
         self.btnHelp.setIconSize(QSize(22, 22))
         self.btnHelp.setStyleSheet(button_style)
-        
-        
-        
+        self.btnHelp.setCursor(Qt.PointingHandCursor)
+
         
         
         # 레이아웃에 버튼 추가
