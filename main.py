@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QHBoxLayout, QWidget
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSignalBlocker
 from PySide6.QtGui import QPalette, QBrush, QColor
 
 # 컴포넌트 임포트
@@ -198,20 +198,25 @@ class MainApp(QMainWindow):
             # AI 일반 답변 메시지
             self.chatArea.addMessage(text, is_user=False, message_type="chat")
         
-        # 스토리 업데이트
-        self.updateUI()
-        
         # 이미지 생성 조건 확인
-        self.checkImageGeneration()
+        if not hasattr(self, "_image_gen_in_progress"):
+            self._image_gen_in_progress = set()
+
+        # 현재 페이지에 대해 아직 이미지 없고, 생성도 안 하고 있다면 → 생성 시작
+        if (
+            self.current_page_idx not in self.page_images
+            and self.current_page_idx not in self._image_gen_in_progress
+        ):
+            self.checkImageGeneration()
     
     def _on_image_gen_ready(self, payload: dict):
         """이미지 생성 완료 처리"""
         if payload["type"] == "image_generated":
             image = payload["image"]
             prompt = payload["prompt"]
+            page_idx = payload["page_idx"]
 
             # 이미지 저장
-            page_idx = self.current_page_idx
             save_path = f"images/page_{page_idx + 1}.png"
             StableV15Engine.save_image(image, save_path)
             self.page_images[page_idx] = save_path
@@ -220,38 +225,72 @@ class MainApp(QMainWindow):
             
             # UI에 이미지 표시
             self.storybookArea.setStoryImage(save_path)
+            if page_idx in self._image_gen_in_progress:
+                self._image_gen_in_progress.remove(page_idx)
 
         elif payload["type"] == "error":
             QMessageBox.critical(self, "이미지 생성 오류", f"이미지 생성에 실패했습니다:\n{payload['error']}")
+            if page_idx in self._image_gen_in_progress:
+                self._image_gen_in_progress.remove(page_idx)
     
     # ========== 스토리 관리 ==========
-    
     def _append_to_story(self, segment: str) -> None:
-        """스토리 세그먼트 추가"""
         segment = segment.strip()
         self.story_parts.append(segment)
         self._add_to_story_pages_list(segment)
-        print(f"story_pages_list: {self.story_pages_list}")
-    
-    def _add_to_story_pages_list(self, segment: str, num_page_segment: int = 4) -> None:
+
+        # 항상 최신 페이지로 이동
+        self.current_page_idx = len(self.story_pages_list) - 1
+
+        def _compose_text(page_idx: int) -> str:
+            segments = self.story_pages_list[page_idx]
+            return " ".join(s.strip() for s in segments if s and s.strip())
+
+        story_text = _compose_text(self.current_page_idx)
+
+        # 페이지/텍스트 갱신
+        self.updateStorybookArea()
+        with QSignalBlocker(self.storybookArea):
+            self.storybookArea.setCurrentPage(self.current_page_idx)
+        self.storybookArea.setStoryText(story_text, page=self.current_page_idx, animated=True)
+
+        # 이미지 동기화
+        if self.current_page_idx in self.page_images:
+            self.storybookArea.setStoryImage(self.page_images[self.current_page_idx])
+        else:
+            self.storybookArea.clearImage()
+
+
+    def _add_to_story_pages_list(self, segment: str, num_page_segment: int = 4) -> bool:
         """스토리 세그먼트를 페이지별로 관리"""
         if not self.story_pages_list:
             self.story_pages_list.append([segment])
-            return
+            return True  # 첫 페이지 생성
 
         last_index = len(self.story_pages_list) - 1
         current_page = self.story_pages_list[last_index]
 
-        if len(current_page) == num_page_segment:
+        if len(current_page) >= num_page_segment:
             self.story_pages_list.append([segment])
+            return True   # 새 페이지 생성
         else:
             current_page.append(segment)
-    
+            return False  # 기존 페이지에 추가
+        
     def checkImageGeneration(self):
         """이미지 생성 조건 확인"""
         if not self.story_pages_list:
             return
-            
+        # 페이지별 진행 상태 확인
+        if not hasattr(self, "_image_gen_in_progress"):
+            self._image_gen_in_progress = set()
+        # 이미 생성된 경우
+        if self.current_page_idx in self.page_images:
+            return
+        # 이미 생성 중인 경우
+        if self.current_page_idx in self._image_gen_in_progress:
+            return
+        
         segments = self.story_pages_list[self.current_page_idx]
         select_idx = 1
         
@@ -260,9 +299,13 @@ class MainApp(QMainWindow):
             prompt_for_image = format_helper.first_sentence(prompt_for_image)
             prompt_for_image += " children's picture book"
             print(f"이미지 생성 프롬프트: {prompt_for_image}")
+            self._image_gen_in_progress.add(self.current_page_idx)
             
             if hasattr(self, 'image_gen_controller'):
-                self.image_gen_controller.operate.emit(prompt_for_image)
+                self.image_gen_controller.operate.emit({
+                    "prompt": prompt_for_image,
+                    "page_idx": self.current_page_idx   # 페이지 번호 확인 가능해야
+                })
     
     # ========== UI 업데이트 ==========
     
@@ -285,15 +328,15 @@ class MainApp(QMainWindow):
         if self.story_pages_list and self.current_page_idx < len(self.story_pages_list):
             segments = self.story_pages_list[self.current_page_idx]
             story_text = " ".join(s.strip() for s in segments if s and s.strip())
-            self.storybookArea.setStoryText(story_text)
-            
-            # 해당 페이지의 이미지가 있으면 표시
+            # 캐시에 있는 텍스트 우선 사용
+            cached_text = self.storybookArea._page_texts.get(self.current_page_idx, story_text)
+            self.storybookArea.setStoryText(cached_text, page=self.current_page_idx, animated=False)
             if self.current_page_idx in self.page_images:
                 self.storybookArea.setStoryImage(self.page_images[self.current_page_idx])
             else:
                 self.storybookArea.clearImage()
         else:
-            self.storybookArea.setStoryText("")
+            self.storybookArea.setStoryText("", page=self.current_page_idx, animated=False)
             self.storybookArea.clearImage()
 
 

@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel,
 from pathlib import Path
 from components.fx.typewriter_effect import TypewriterEffect
 from tts.voice_type import VoiceType
-from tts.tts_engine import TTSWorker
+from tts.tts_controller import TTSController
 
 class StorybookArea(QFrame):
     # 시그널 정의
@@ -18,18 +18,19 @@ class StorybookArea(QFrame):
         super().__init__(parent)
         self.current_page = 0
         self.total_pages = 1
-        self.setupUI()
-        self.connectSignals()
         # Typewriter
         self._typer = TypewriterEffect(self)
-        self._current_full_text = ""
+        self._page_texts: dict[int, str] = {}
         self.typing_animated = True
         self.typing_interval = 30
         self.typing_by_word = False
         # TTS
-        self.tts_worker = None
         self.tts_rate = 160
         self.tts_mode = VoiceType.AMERICAN_WOMAN
+        self.tts_controller = TTSController(self)
+
+        self.setupUI()
+        self.connectSignals()
 
     def _get_relative_font_size(self, base_size):
         """DPI에 따른 상대적 폰트 크기 계산"""
@@ -368,6 +369,10 @@ class StorybookArea(QFrame):
         self.btnPrevPage.clicked.connect(self.previousPage)
         self.btnNextPage.clicked.connect(self.nextPage)
         self.btnReadAloud.clicked.connect(self.readAloud)
+        self.tts_controller.worker.started.connect(self._onTTSStarted)
+        self.tts_controller.worker.finished.connect(self._onTTSFinished)
+        self.tts_controller.worker.error.connect(self._onTTSError)
+
 
 
 
@@ -385,38 +390,52 @@ class StorybookArea(QFrame):
             self.updatePageDisplay()
             self.pageChanged.emit(self.current_page)
 
-    def setStoryText(self, new_text: str, force_restart: bool = False):
-        """
-        - If on the same page and text is growing, call update() (incremental typing)
-        - On page change or forced restart, start from the beginning
-        - Reset scroll only when forced restart or page change
-        """
-        if not self._current_full_text:
-            force_restart = True
-        is_prefix_grow = new_text.startswith(getattr(self, "_current_full_text", ""))
-        # Reset scroll only for forced restart or page change
-        if force_restart or not is_prefix_grow:
-            # Reset scroll if available
-            if hasattr(self, "textScrollArea"):
-                bar = self.textScrollArea.verticalScrollBar()
-                bar.setValue(bar.minimum())
-            # Full restart
-            self._typer.start(
-                label=self.textContent,
-                text=new_text,
-                base_interval=self.typing_interval,
-                by_word=self.typing_by_word
-            )
+    def setStoryText(self, new_text: str, *, page: int, animated: bool):
+        old_text = self._page_texts.get(page, "")
+        print(f"[setStoryText] page={page}, animated={animated}, typing_animated={self.typing_animated}")
+        print(f"  old_text(len={len(old_text)}): {repr(old_text[:30])}...")
+        print(f"  new_text(len={len(new_text)}): {repr(new_text[:30])}...")
+
+        # 캐시에 저장
+        self._page_texts[page] = new_text
+        print(f"[setStoryText] 캐시 저장 완료 (page={page}, len={len(new_text)})\n")
+        
+        if not self.typing_animated:
+            # 1) 사용자 설정에서 타자기 효과 꺼짐 → 즉시 표시
+            print("→ 조건1: typing_animated=False → 즉시 표시")
+            if hasattr(self._typer, "stop"):
+                self._typer.stop()
+            self.textContent.setText(new_text)
+
+        elif not animated:
+            # 2) 페이지 이동/복원 → 무조건 즉시 표시
+            print("→ 조건2: animated=False (페이지 이동) → 즉시 표시")
+            if hasattr(self._typer, "stop"):
+                self._typer.stop()
+            self.textContent.setText(new_text)
+
         else:
-            # Incremental update (immediate output if animation is off)
-            if self.typing_animated:
-                self._typer.update(new_text)
-            else:
-                # Animation disabled: apply immediately
+            # 3) animated=True & typing_animated=True → 타자기 효과
+            is_prefix_grow = new_text.startswith(old_text)
+            print(f"→ 조건3: animated=True & typing_animated=True, is_prefix_grow={is_prefix_grow}")
+
+            if not old_text or not is_prefix_grow:
+                print("   → 하위조건3a: 새 타자기 시작")
                 if hasattr(self._typer, "stop"):
                     self._typer.stop()
-                self.textContent.setText(new_text)
-        self._current_full_text = new_text
+                if hasattr(self, "textScrollArea"):
+                    bar = self.textScrollArea.verticalScrollBar()
+                    bar.setValue(bar.minimum())
+
+                self._typer.start(
+                    label=self.textContent,
+                    text=new_text,
+                    base_interval=self.typing_interval,
+                    by_word=self.typing_by_word
+                )
+            else:
+                print("   → 하위조건3b: 증분 update")
+                self._typer.update(new_text)
 
     def setStoryImage(self, image_path: str):
         """스토리 이미지 설정"""
@@ -451,6 +470,7 @@ class StorybookArea(QFrame):
         if self.current_page > 0:
             if hasattr(self, "_typer"):
                 self._typer.stop()
+            self.stopTTS()
             self.current_page -= 1
             self.updatePageDisplay()
             self.pageChanged.emit(self.current_page)
@@ -460,6 +480,7 @@ class StorybookArea(QFrame):
         if self.current_page < self.total_pages - 1:
             if hasattr(self, "_typer"):
                 self._typer.stop()
+            self.stopTTS()
             self.current_page += 1
             self.updatePageDisplay()
             self.pageChanged.emit(self.current_page)
@@ -467,7 +488,9 @@ class StorybookArea(QFrame):
     def updatePageDisplay(self):
         """페이지 표시 업데이트"""
         self.pageNumber.setText(str(self.current_page + 1))
-        
+        # Chapter 제목 업데이트
+        self.storybookTitle.setText(f"CHAPTER {self.current_page + 1}")
+    
         # 버튼 활성화/비활성화
         self.btnPrevPage.setEnabled(self.current_page > 0)
         self.btnNextPage.setEnabled(self.current_page < self.total_pages - 1)
@@ -483,28 +506,52 @@ class StorybookArea(QFrame):
     def getStoryText(self) -> str:
         """Return the current story text"""
         return self.textContent.text()
-
+    
     def applyTTSSettings(self, rate: int, mode: VoiceType):
-        """Apply TTS settings from settings dialog"""
+        """Apply TTS settings from the settings dialog"""
         self.tts_rate = rate
         self.tts_mode = mode
 
     def applyTypewriterSettings(self, animated: bool, interval: int, by_word: bool):
+        """Apply typewriter effect settings (animation, interval, by word/character)"""
         self.typing_animated = animated
         self.typing_interval = interval
         self.typing_by_word = by_word
 
     def readAloud(self):
-        """Run TTS in a QThread with the current settings"""
-        text = self.textContent.text().strip()
+        """Toggle TTS playback for the current text"""
+        if self.tts_controller.is_running():
+            # If already running, stop playback
+            self.stopTTS()
+            return
+
+        # Retrieve text either from QTextEdit (toPlainText) or QLabel (text)
+        getter = getattr(self.textContent, "toPlainText", None)
+        text = (getter() if callable(getter) else self.textContent.text()).strip()
         if not text:
             print("[StorybookArea] No text to read.")
             return
 
-        # Clean up existing worker if one is already running
-        if self.tts_worker and self.tts_worker.isRunning():
-            self.tts_worker.terminate()
-            self.tts_worker.wait()
-        # Start a new worker
-        self.tts_worker = TTSWorker(text, self.tts_mode, self.tts_rate)
-        self.tts_worker.start()
+        # Start playback with current TTS settings
+        self.tts_controller.start(text, self.tts_mode, self.tts_rate)
+
+    def stopTTS(self):
+        """Stop TTS playback"""
+        self.tts_controller.stop()
+        # Button UI reset is handled in the finished event
+
+    def _onTTSStarted(self):
+        """Update button when TTS playback starts"""
+        self.btnReadAloud.setText("⏹")
+        self.btnReadAloud.setToolTip("Stop reading")
+
+    def _onTTSFinished(self):
+        """Update button when TTS playback finishes"""
+        self.btnReadAloud.setText("🔊")
+        self.btnReadAloud.setToolTip("Read text aloud")
+
+    def _onTTSError(self, message: str):
+        """Handle TTS errors and reset button state"""
+        print(f"[StorybookArea] TTS error: {message}")
+        self.btnReadAloud.setText("🔊")
+        self.btnReadAloud.setToolTip("Read text aloud")

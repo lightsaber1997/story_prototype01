@@ -20,26 +20,30 @@ import format_helper
 class ImageGenWorker(QObject):
     """Handles image generation in a background thread."""
 
-    resultReady = Signal(dict)  # keys: type, image (PIL.Image), prompt (str)
+    resultReady = Signal(dict)  # keys: type, image (PIL.Image), prompt (str), page_idx (int)
 
     def __init__(self, engine):  # engine: StableV15Engine
         super().__init__()
         self.engine = engine
 
     @Slot(str)
-    def doWork(self, prompt: str):
+    def doWork(self, payload: dict):
         try:
+            prompt = payload["prompt"]
+            page_idx = payload.get("page_idx", 0)
             image = self.engine.generate_image(prompt)
             self.resultReady.emit({
                 "type": "image_generated",
                 "image": image,
-                "prompt": prompt
+                "prompt": prompt,
+                "page_idx": page_idx
             })
         except Exception as e:
             print(f"[ImageGenWorker] Error generating image: {e}")
             self.resultReady.emit({
                 "type": "error",
-                "error": str(e)
+                "error": str(e),
+                "page_idx": payload.get("page_idx", 0)
             })
 
 
@@ -47,7 +51,7 @@ class ImageGenWorker(QObject):
 # ImageGenController (thread wrapper)
 # ════════════════════════════════════════════════════════════════════
 class ImageGenController(QObject):
-    operate = Signal(str)  # accepts the prompt string
+    operate = Signal(dict)   # prompt + page_idx dict
 
     def __init__(self, result_callback, engine):  # engine: StableV15Engine
         super().__init__()
