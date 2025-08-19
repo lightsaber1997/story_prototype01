@@ -199,7 +199,15 @@ class MainApp(QMainWindow):
             self.chatArea.addMessage(text, is_user=False, message_type="chat")
         
         # 이미지 생성 조건 확인
-        self.checkImageGeneration()
+        if not hasattr(self, "_image_gen_in_progress"):
+            self._image_gen_in_progress = set()
+
+        # 현재 페이지에 대해 아직 이미지 없고, 생성도 안 하고 있다면 → 생성 시작
+        if (
+            self.current_page_idx not in self.page_images
+            and self.current_page_idx not in self._image_gen_in_progress
+        ):
+            self.checkImageGeneration()
     
     def _on_image_gen_ready(self, payload: dict):
         """이미지 생성 완료 처리"""
@@ -217,10 +225,13 @@ class MainApp(QMainWindow):
             
             # UI에 이미지 표시
             self.storybookArea.setStoryImage(save_path)
+            if page_idx in self._image_gen_in_progress:
+                self._image_gen_in_progress.remove(page_idx)
 
         elif payload["type"] == "error":
             QMessageBox.critical(self, "이미지 생성 오류", f"이미지 생성에 실패했습니다:\n{payload['error']}")
-    
+            if page_idx in self._image_gen_in_progress:
+                self._image_gen_in_progress.remove(page_idx)
     
     # ========== 스토리 관리 ==========
     def _append_to_story(self, segment: str) -> None:
@@ -270,7 +281,16 @@ class MainApp(QMainWindow):
         """이미지 생성 조건 확인"""
         if not self.story_pages_list:
             return
-            
+        # 페이지별 진행 상태 확인
+        if not hasattr(self, "_image_gen_in_progress"):
+            self._image_gen_in_progress = set()
+        # 이미 생성된 경우
+        if self.current_page_idx in self.page_images:
+            return
+        # 이미 생성 중인 경우
+        if self.current_page_idx in self._image_gen_in_progress:
+            return
+        
         segments = self.story_pages_list[self.current_page_idx]
         select_idx = 1
         
@@ -279,6 +299,7 @@ class MainApp(QMainWindow):
             prompt_for_image = format_helper.first_sentence(prompt_for_image)
             prompt_for_image += " children's picture book"
             print(f"이미지 생성 프롬프트: {prompt_for_image}")
+            self._image_gen_in_progress.add(self.current_page_idx)
             
             if hasattr(self, 'image_gen_controller'):
                 self.image_gen_controller.operate.emit({
