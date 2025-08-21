@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QPixmap
+from PySide6.QtGui import QFont, QPixmap, QIcon
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
                                QPushButton, QScrollArea, QFileDialog)
 from pathlib import Path
@@ -282,17 +282,24 @@ class StorybookArea(QFrame):
         self.pageNavLayout = QHBoxLayout(self.pageNavFrame)
         self.pageNavLayout.setContentsMargins(40, 15, 40, 15)
         self.pageNavLayout.setSpacing(20)
+
+        # 통일된 아이콘/버튼 박스 크기
+        ICON_SIZE = 22
+        ICON_PAD  = 6
+        BOX = ICON_SIZE + ICON_PAD * 2
         
         # 이전 페이지 버튼
         self.btnPrevPage = QPushButton("‹", self.pageNavFrame)
         self.btnPrevPage.setObjectName("btnPrevPage")
-        self.btnPrevPage.setFixedSize(35, 35)
+        # self.btnPrevPage.setFixedSize(34, 34)
+        self.btnPrevPage.setFixedSize(BOX, BOX)
         self.btnPrevPage.setToolTip("이전 페이지")
 
         # Read Aloud Button (🔊)
-        self.btnReadAloud = QPushButton("🔊", self.pageNavFrame)
+        self.btnReadAloud = QPushButton("", self.pageNavFrame)
         self.btnReadAloud.setObjectName("btnReadAloud")
-        self.btnReadAloud.setFixedSize(35, 35)
+        self._setReadAloudIdleIcon()
+        # self.btnReadAloud.setFixedSize(34, 34)
         self.btnReadAloud.setToolTip("텍스트 읽어주기")
         self.btnReadAloud.setCursor(Qt.PointingHandCursor)
 
@@ -300,7 +307,8 @@ class StorybookArea(QFrame):
         # 다음 페이지 버튼
         self.btnNextPage = QPushButton("›", self.pageNavFrame)
         self.btnNextPage.setObjectName("btnNextPage")
-        self.btnNextPage.setFixedSize(35, 35)
+        # self.btnNextPage.setFixedSize(34, 34)
+        self.btnNextPage.setFixedSize(BOX, BOX)
         self.btnNextPage.setToolTip("다음 페이지")
         
         # 페이지 번호 표시
@@ -309,6 +317,8 @@ class StorybookArea(QFrame):
         self.pageNumber.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.pageNumber.setFixedWidth(40)
         
+        
+
         # 버튼 폰트 설정
         nav_font = QFont()
         nav_font.setFamilies(["Georgia", "Times New Roman", "serif"])
@@ -340,7 +350,6 @@ class StorybookArea(QFrame):
             }
             QPushButton:pressed {
                 background: rgba(42, 41, 53, 0.2);
-                transform: scale(0.95);
             }
             QPushButton:disabled {
                 color: rgba(42, 41, 53, 0.3);
@@ -369,10 +378,17 @@ class StorybookArea(QFrame):
         self.pageNavLayout.addWidget(self.btnNextPage)
         self.pageNavLayout.addStretch()
 
-        self.btnExportPDF = QPushButton("📄", self.pageNavFrame)
+        self.btnExportPDF = QPushButton("Export", self.pageNavFrame)
+        self.btnExportPDF.setObjectName("btnExportPDF")
+        icon_dir = Path("assets/icon")
+        pdf_normal = icon_dir / "export_light.svg"
+        pdf_hover  = icon_dir / "export_strong.svg"
+        self._applySvgIconButton(self.btnExportPDF, str(pdf_normal), str(pdf_hover), size=22, padding=6)
         self.btnExportPDF.setToolTip("Export storybook as PDF")
         self.pageNavLayout.addWidget(self.btnExportPDF)
         self.btnExportPDF.setCursor(Qt.PointingHandCursor)
+        
+
 
     
 
@@ -532,6 +548,57 @@ class StorybookArea(QFrame):
         self.typing_interval = interval
         self.typing_by_word = by_word
 
+
+    def _applySvgIconButton(self, btn: QPushButton, normal_svg: str, hover_svg: str, *, size: int = 22, padding: int = 6):
+        """
+            QPushButton에 SVG 아이콘을 배경으로 깔고, hover시 다른 SVG로 바꿔주는 스타일을 적용.
+            버튼 텍스트/아이콘은 비워두고 background-image만 사용.
+        """
+        btn.setText("")
+        btn.setIcon(QIcon()) 
+        btn.setCursor(Qt.PointingHandCursor)
+        # box = size + padding * 2
+        box=34
+        btn.setFixedSize(box, box)
+
+        obj = btn.objectName()
+        btn.setStyleSheet(f"""
+            QPushButton#{obj} {{
+                background: transparent;
+                border: none;
+                padding: {padding}px;
+                background-image: url({normal_svg});
+                background-repeat: no-repeat;
+                background-position: center;
+                border-radius: {max(6, padding)}px;
+            }}
+            QPushButton#{obj}:hover {{
+                background-image: url({hover_svg});
+                background-color: rgba(42, 41, 53, 0.08);
+            }}
+            QPushButton#{obj}:pressed {{
+                background-color: rgba(42, 41, 53, 0.16);
+            }}
+            QPushButton#{obj}:disabled {{
+                background-image: url({normal_svg});
+                opacity: 0.45;
+            }}
+        """)
+
+    def _setReadAloudIdleIcon(self):
+        icon_dir = Path("assets/icon")
+        normal = icon_dir / "speaker_light.svg"
+        hover  = icon_dir / "speaker_strong.svg"
+        self._applySvgIconButton(self.btnReadAloud, str(normal), str(hover), size=22, padding=6)
+        self.btnReadAloud.setToolTip("텍스트 읽어주기")
+
+    def _setReadAloudStopIcon(self):
+        icon_dir = Path("assets/icon")
+        normal = icon_dir / "speaker_strong.svg"
+        hover  = icon_dir / "speaker_light.svg"
+        self._applySvgIconButton(self.btnReadAloud, str(normal), str(hover), size=22, padding=6)
+        self.btnReadAloud.setToolTip("읽기 중지")
+
     def readAloud(self):
         """Toggle TTS playback for the current text"""
         if self.tts_controller.is_running():
@@ -556,19 +623,22 @@ class StorybookArea(QFrame):
 
     def _onTTSStarted(self):
         """Update button when TTS playback starts"""
-        self.btnReadAloud.setText("⏹")
-        self.btnReadAloud.setToolTip("Stop reading")
+        # self.btnReadAloud.setText("⏹")
+        # self.btnReadAloud.setToolTip("Stop reading")
+        self._setReadAloudIdleIcon()
 
     def _onTTSFinished(self):
         """Update button when TTS playback finishes"""
-        self.btnReadAloud.setText("🔊")
-        self.btnReadAloud.setToolTip("Read text aloud")
+        # self.btnReadAloud.setText("🔊")
+        # self.btnReadAloud.setToolTip("Read text aloud")
+        self._setReadAloudStopIcon()
 
     def _onTTSError(self, message: str):
         """Handle TTS errors and reset button state"""
         print(f"[StorybookArea] TTS error: {message}")
-        self.btnReadAloud.setText("🔊")
-        self.btnReadAloud.setToolTip("Read text aloud")
+        # self.btnReadAloud.setText("🔊")
+        # self.btnReadAloud.setToolTip("Read text aloud")
+        self._setReadAloudIdleIcon()
 
     def saveAllPagesAsPDF(self):
         """Open save dialog and export all pages into a single PDF (with images + text)."""
