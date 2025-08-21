@@ -222,7 +222,7 @@ class MainApp(QMainWindow):
 
         if kind == "story_line":
             # AI 문법 수정 메시지
-            self.chatArea.addMessage(f"문법 수정: {text}", is_user=False, message_type="correction")
+            self.chatArea.addMessage(f"Grammar Correction: {text}", is_user=False, message_type="correction")
             self._append_to_story(text.strip())
 
         elif kind == "ai_suggestion":
