@@ -8,6 +8,7 @@ Engines:
 - ChatGPTEngine: OpenAI GPT API 엔진
 - Phi3MiniEngine: 로컬 Phi-3 모델 엔진
 - StableV15Engine: Stable Diffusion 이미지 생성 엔진
+- QStableV21Engine: Qualcomm Stable Diffusion 이미지 생성 엔진
 - ImageGenController: 이미지 생성 컨트롤러
 """
 
@@ -15,6 +16,7 @@ from .chat_engine import ChatController, ChatWorker
 from .chat_gpt_engine import ChatGPTEngine
 from .phi3_mini_engine import Phi3MiniEngine
 from .stable_engine import StableV15Engine
+from .q_stable_engine import QStableV21Engine   
 from .image_gen_engine import ImageGenController, ImageGenWorker
 
 __all__ = [
@@ -23,6 +25,7 @@ __all__ = [
     'ChatGPTEngine',
     'Phi3MiniEngine',
     'StableV15Engine',
+    'QStableV21Engine',
     'ImageGenController',
     'ImageGenWorker'
 ]

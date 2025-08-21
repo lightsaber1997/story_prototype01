@@ -1,0 +1,20 @@
+# Core numerical + image stack
+numpy>=1.23
+Pillow>=9.0
+
+# Hugging Face ecosystem
+transformers>=4.30
+diffusers>=0.20
+accelerate>=0.20  # usually needed with diffusers
+
+# open AI
+openai
+
+# PySide GUI
+PySide6==6.9.1
+
+# API, env management
+python-dotenv
+
+# tts
+pyttsx3==2.99

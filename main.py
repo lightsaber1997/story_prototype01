@@ -18,6 +18,7 @@ from engines.phi3_mini_engine import Phi3MiniEngine
 from engines.chat_engine import *
 import format_helper
 from engines.stable_engine import StableV15Engine
+from engines.q_stable_engine import QStableV21Engine
 from engines.image_gen_engine import *
 
 
@@ -81,8 +82,19 @@ class MainApp(QMainWindow):
             self.llm_engine = get_llm_engine()
             self.chat_controller = ChatController(self._on_chat_reply, self.llm_engine)
 
+            text_encoder_path = r"C:\DYS\merge_SD\story_prototype01\data\models\text_encoder.onnx\model.onnx"
+            vae_decoder_path = r"C:\DYS\merge_SD\story_prototype01\data\models\vae_decoder.onnx\model.onnx"
+            unet_path = r"C:\DYS\merge_SD\story_prototype01\data\models\unet.onnx\model.onnx"
+
             # 이미지 생성 엔진
-            self.image_gen_engine = StableV15Engine()
+            self.image_gen_engine = QStableV21Engine(
+            text_encoder=text_encoder_path,
+            vae_decoder=vae_decoder_path,
+            unet=unet_path,
+            scheduler="ddim",
+            channel_last_latent=True
+        )
+            
             self.image_gen_controller = ImageGenController(
                 self._on_image_gen_ready,
                 self.image_gen_engine)
@@ -218,7 +230,7 @@ class MainApp(QMainWindow):
 
             # 이미지 저장
             save_path = f"images/page_{page_idx + 1}.png"
-            StableV15Engine.save_image(image, save_path)
+            QStableV21Engine.save_image(image, save_path)
             self.page_images[page_idx] = save_path
 
             print(f"[Image] Saved to {save_path} from prompt: {prompt}")
@@ -297,7 +309,9 @@ class MainApp(QMainWindow):
         if segments is not None and (len(segments) == select_idx + 1):
             prompt_for_image = segments[select_idx]
             prompt_for_image = format_helper.first_sentence(prompt_for_image)
-            prompt_for_image += " children's picture book"
+            #prompt_for_image += " children's picture book"
+            # DEBUG
+            prompt_for_image = "A magical dragon, children’s storybook style"
             print(f"이미지 생성 프롬프트: {prompt_for_image}")
             self._image_gen_in_progress.add(self.current_page_idx)
             

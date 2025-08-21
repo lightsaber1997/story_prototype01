@@ -26,12 +26,16 @@ class ImageGenWorker(QObject):
         super().__init__()
         self.engine = engine
 
-    @Slot(str)
+    @Slot(dict)
     def doWork(self, payload: dict):
         try:
             prompt = payload["prompt"]
             page_idx = payload.get("page_idx", 0)
-            image = self.engine.generate_image(prompt)
+            num_steps = payload.get("num_steps", 25)
+            seed = payload.get("seed", 41)
+            
+            image = self.engine.generate_image(prompt, num_steps=num_steps, seed=seed)
+            
             self.resultReady.emit({
                 "type": "image_generated",
                 "image": image,
