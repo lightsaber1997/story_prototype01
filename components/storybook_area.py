@@ -215,12 +215,12 @@ class StorybookArea(QFrame):
         """)
         
         # 레이아웃에 추가
-        self.pageNavLayout.addWidget(self.btnPrevPage)
-        self.pageNavLayout.addStretch()
-        self.pageNavLayout.addWidget(self.pageLabel)
-        self.pageNavLayout.addStretch()
-        self.pageNavLayout.addWidget(self.btnNextPage)
-    
+        # self.pageNavLayout.addWidget(self.btnPrevPage)
+        # self.pageNavLayout.addStretch()
+        # self.pageNavLayout.addWidget(self.pageLabel)
+        # self.pageNavLayout.addStretch()
+        # self.pageNavLayout.addWidget(self.btnNextPage)
+        
     def createTextArea(self):
         """텍스트 영역 생성"""
         self.textScrollArea = QScrollArea(self)
@@ -274,8 +274,123 @@ class StorybookArea(QFrame):
         
         self.textScrollArea.setWidget(self.textContent)
     
+    # def createBookPageNavigation(self):
+    #     """페이지 네비게이션 생성"""
+    #     self.pageNavFrame = QFrame(self)
+    #     self.pageNavFrame.setObjectName("pageNavFrame")
+    #     self.pageNavFrame.setFixedHeight(60)
+    #     self.pageNavLayout = QHBoxLayout(self.pageNavFrame)
+    #     self.pageNavLayout.setContentsMargins(40, 15, 40, 15)
+    #     self.pageNavLayout.setSpacing(20)
+
+    #     # 통일된 아이콘/버튼 박스 크기
+    #     ICON_SIZE = 22
+    #     ICON_PAD  = 6
+    #     BOX = ICON_SIZE + ICON_PAD * 2
+
+    #     # Read Aloud Button (🔊)
+    #     self.btnReadAloud = QPushButton("", self.pageNavFrame)
+    #     self.btnReadAloud.setObjectName("btnReadAloud")
+    #     self._setReadAloudIdleIcon()
+    #     # self.btnReadAloud.setFixedSize(34, 34)
+    #     self.btnReadAloud.setToolTip("텍스트 읽어주기")
+    #     self.btnReadAloud.setCursor(Qt.PointingHandCursor)
+        
+    #     # 이전 페이지 버튼
+    #     self.btnPrevPage = QPushButton("‹", self.pageNavFrame)
+    #     self.btnPrevPage.setObjectName("btnPrevPage")
+    #     # self.btnPrevPage.setFixedSize(34, 34)
+    #     self.btnPrevPage.setFixedSize(BOX, BOX)
+    #     self.btnPrevPage.setToolTip("이전 페이지")
+
+        
+
+
+    #     # 다음 페이지 버튼
+    #     self.btnNextPage = QPushButton("›", self.pageNavFrame)
+    #     self.btnNextPage.setObjectName("btnNextPage")
+    #     # self.btnNextPage.setFixedSize(34, 34)
+    #     self.btnNextPage.setFixedSize(BOX, BOX)
+    #     self.btnNextPage.setToolTip("다음 페이지")
+        
+    #     # 페이지 번호 표시
+    #     self.pageNumber = QLabel("1", self.pageNavFrame)
+    #     self.pageNumber.setObjectName("pageNumber")
+    #     self.pageNumber.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    #     self.pageNumber.setFixedWidth(40)
+        
+        
+
+    #     # 버튼 폰트 설정
+    #     nav_font = QFont()
+    #     nav_font.setFamilies(["Georgia", "Times New Roman", "serif"])
+    #     nav_font.setPointSize(self._get_relative_font_size(18))
+    #     nav_font.setBold(False)
+    #     self.btnPrevPage.setFont(nav_font)
+    #     self.btnNextPage.setFont(nav_font)
+        
+    #     # 페이지 번호 폰트 설정
+    #     page_font = QFont()
+    #     page_font.setFamilies(["Georgia", "Times New Roman", "serif"])
+    #     page_font.setPointSize(self._get_relative_font_size(12))
+    #     page_font.setBold(False)
+    #     self.pageNumber.setFont(page_font)
+        
+    #     # 버튼 스타일
+    #     nav_button_style = """
+    #         QPushButton {
+    #             background: transparent;
+    #             border: none;
+    #             color: #2A2935;
+    #             font-size: 18px;
+    #             font-weight: normal;
+    #             border-radius: 17px;
+    #         }
+    #         QPushButton:hover {
+    #             background: rgba(42, 41, 53, 0.1);
+    #             color: #1A1925;
+    #         }
+    #         QPushButton:pressed {
+    #             background: rgba(42, 41, 53, 0.2);
+    #         }
+    #         QPushButton:disabled {
+    #             color: rgba(42, 41, 53, 0.3);
+    #             background: transparent;
+    #         }
+    #     """
+        
+    #     self.btnPrevPage.setStyleSheet(nav_button_style)
+    #     self.btnNextPage.setStyleSheet(nav_button_style)
+        
+    #     # 페이지 번호 스타일
+    #     self.pageNumber.setStyleSheet("""
+    #         QLabel {
+    #             color: #2A2935;
+    #             background: transparent;
+    #             font-family: 'Georgia', 'Times New Roman', serif;
+    #             font-size: 12px;
+    #             padding: 5px;
+    #         }
+    #     """)
+        
+    #     # 레이아웃에 추가 - 중앙 정렬
+    #     self.pageNavLayout.addStretch()
+    #     self.pageNavLayout.addWidget(self.btnPrevPage)
+    #     self.pageNavLayout.addWidget(self.pageNumber)
+    #     self.pageNavLayout.addWidget(self.btnNextPage)
+    #     self.pageNavLayout.addStretch()
+
+    #     self.btnExportPDF = QPushButton("", self.pageNavFrame)
+    #     self.btnExportPDF.setObjectName("btnExportPDF")
+    #     icon_dir = Path("assets/icon")
+    #     pdf_normal = icon_dir / "export_light.svg"
+    #     pdf_hover  = icon_dir / "export_strong.svg"
+    #     self._applySvgIconButton(self.btnExportPDF, str(pdf_normal), str(pdf_hover), size=22, padding=6)
+    #     self.btnExportPDF.setToolTip("Export storybook as PDF")
+    #     self.pageNavLayout.addWidget(self.btnExportPDF)
+    #     self.btnExportPDF.setCursor(Qt.PointingHandCursor)
     def createBookPageNavigation(self):
-        """페이지 네비게이션 생성"""
+        """페이지 네비게이션 생성 (좌/중앙/우 3분할로 완전 중앙 정렬)"""
         self.pageNavFrame = QFrame(self)
         self.pageNavFrame.setObjectName("pageNavFrame")
         self.pageNavFrame.setFixedHeight(60)
@@ -283,58 +398,46 @@ class StorybookArea(QFrame):
         self.pageNavLayout.setContentsMargins(40, 15, 40, 15)
         self.pageNavLayout.setSpacing(20)
 
-        # 통일된 아이콘/버튼 박스 크기
+        # 통일된 아이콘/버튼 박스 규격
         ICON_SIZE = 22
         ICON_PAD  = 6
-        BOX = ICON_SIZE + ICON_PAD * 2
-        
-        # 이전 페이지 버튼
-        self.btnPrevPage = QPushButton("‹", self.pageNavFrame)
-        self.btnPrevPage.setObjectName("btnPrevPage")
-        # self.btnPrevPage.setFixedSize(34, 34)
-        self.btnPrevPage.setFixedSize(BOX, BOX)
-        self.btnPrevPage.setToolTip("이전 페이지")
+        BOX = ICON_SIZE + ICON_PAD * 2  # 22 + 6*2 = 34
 
-        # Read Aloud Button (🔊)
+        # 좌측: 스피커 버튼
         self.btnReadAloud = QPushButton("", self.pageNavFrame)
         self.btnReadAloud.setObjectName("btnReadAloud")
-        self._setReadAloudIdleIcon()
-        # self.btnReadAloud.setFixedSize(34, 34)
+        self._setReadAloudIdleIcon() 
         self.btnReadAloud.setToolTip("텍스트 읽어주기")
         self.btnReadAloud.setCursor(Qt.PointingHandCursor)
 
+        leftSlot = QFrame(self.pageNavFrame)
+        leftSlot.setFixedSize(BOX, BOX)
+        ll = QHBoxLayout(leftSlot)
+        ll.setContentsMargins(0, 0, 0, 0)
+        ll.setSpacing(0)
+        ll.addWidget(self.btnReadAloud, alignment=Qt.AlignCenter)
 
-        # 다음 페이지 버튼
+        # 중앙: ‹  pageNumber  ›
+        self.btnPrevPage = QPushButton("‹", self.pageNavFrame)
+        self.btnPrevPage.setObjectName("btnPrevPage")
+        self.btnPrevPage.setFixedSize(BOX, BOX)
+
         self.btnNextPage = QPushButton("›", self.pageNavFrame)
         self.btnNextPage.setObjectName("btnNextPage")
-        # self.btnNextPage.setFixedSize(34, 34)
         self.btnNextPage.setFixedSize(BOX, BOX)
-        self.btnNextPage.setToolTip("다음 페이지")
-        
-        # 페이지 번호 표시
+
         self.pageNumber = QLabel("1", self.pageNavFrame)
         self.pageNumber.setObjectName("pageNumber")
-        self.pageNumber.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.pageNumber.setAlignment(Qt.AlignCenter)
         self.pageNumber.setFixedWidth(40)
-        
-        
 
-        # 버튼 폰트 설정
+        # 버튼 폰트/스타일
         nav_font = QFont()
         nav_font.setFamilies(["Georgia", "Times New Roman", "serif"])
         nav_font.setPointSize(self._get_relative_font_size(18))
-        nav_font.setBold(False)
         self.btnPrevPage.setFont(nav_font)
         self.btnNextPage.setFont(nav_font)
-        
-        # 페이지 번호 폰트 설정
-        page_font = QFont()
-        page_font.setFamilies(["Georgia", "Times New Roman", "serif"])
-        page_font.setPointSize(self._get_relative_font_size(12))
-        page_font.setBold(False)
-        self.pageNumber.setFont(page_font)
-        
-        # 버튼 스타일
+
         nav_button_style = """
             QPushButton {
                 background: transparent;
@@ -356,11 +459,13 @@ class StorybookArea(QFrame):
                 background: transparent;
             }
         """
-        
         self.btnPrevPage.setStyleSheet(nav_button_style)
         self.btnNextPage.setStyleSheet(nav_button_style)
-        
-        # 페이지 번호 스타일
+
+        page_font = QFont()
+        page_font.setFamilies(["Georgia", "Times New Roman", "serif"])
+        page_font.setPointSize(self._get_relative_font_size(12))
+        self.pageNumber.setFont(page_font)
         self.pageNumber.setStyleSheet("""
             QLabel {
                 color: #2A2935;
@@ -370,27 +475,42 @@ class StorybookArea(QFrame):
                 padding: 5px;
             }
         """)
-        
-        # 레이아웃에 추가 - 중앙 정렬
-        self.pageNavLayout.addStretch()
-        self.pageNavLayout.addWidget(self.btnPrevPage)
-        self.pageNavLayout.addWidget(self.pageNumber)
-        self.pageNavLayout.addWidget(self.btnNextPage)
-        self.pageNavLayout.addStretch()
 
-        self.btnExportPDF = QPushButton("Export", self.pageNavFrame)
+        centerBox = QFrame(self.pageNavFrame)
+        cl = QHBoxLayout(centerBox)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setSpacing(8)
+        cl.addWidget(self.btnPrevPage)
+        cl.addWidget(self.pageNumber, 0, Qt.AlignVCenter)
+        cl.addWidget(self.btnNextPage)
+
+        # 우측: Export 버튼
+        self.btnExportPDF = QPushButton("", self.pageNavFrame)
         self.btnExportPDF.setObjectName("btnExportPDF")
         icon_dir = Path("assets/icon")
         pdf_normal = icon_dir / "export_light.svg"
         pdf_hover  = icon_dir / "export_strong.svg"
-        self._applySvgIconButton(self.btnExportPDF, str(pdf_normal), str(pdf_hover), size=22, padding=6)
+        self._applySvgIconButton(self.btnExportPDF, str(pdf_normal), str(pdf_hover),
+                                size=ICON_SIZE, padding=ICON_PAD)
         self.btnExportPDF.setToolTip("Export storybook as PDF")
-        self.pageNavLayout.addWidget(self.btnExportPDF)
         self.btnExportPDF.setCursor(Qt.PointingHandCursor)
+
+        rightSlot = QFrame(self.pageNavFrame)
+        rightSlot.setFixedSize(BOX, BOX)
+        rl = QHBoxLayout(rightSlot)
+        rl.setContentsMargins(0, 0, 0, 0)
+        rl.setSpacing(0)
+        rl.addWidget(self.btnExportPDF, alignment=Qt.AlignCenter)
+
+        self.pageNavLayout.addWidget(leftSlot, 0, Qt.AlignVCenter)
+        self.pageNavLayout.addStretch(1)
+        self.pageNavLayout.addWidget(centerBox, 0, Qt.AlignVCenter)
+        self.pageNavLayout.addStretch(1)
+        self.pageNavLayout.addWidget(rightSlot, 0, Qt.AlignVCenter)
+
+
+
         
-
-
-    
 
     
     def connectSignals(self):
@@ -558,7 +678,8 @@ class StorybookArea(QFrame):
         btn.setIcon(QIcon()) 
         btn.setCursor(Qt.PointingHandCursor)
         # box = size + padding * 2
-        box=34
+        # box=34
+        box=size+padding*2
         btn.setFixedSize(box, box)
 
         obj = btn.objectName()
