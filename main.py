@@ -12,6 +12,7 @@ from components.navigation_bar import NavigationBar
 from components.chat_area import ChatArea
 from components.storybook_area import StorybookArea
 from components.settings_dialog import SettingsDialog
+from components.home_screen import HomeScreen
 
 # AI 엔진 임포트
 from engines.phi3_mini_engine import Phi3MiniEngine
@@ -20,6 +21,30 @@ import format_helper
 from engines.stable_engine import StableV15Engine
 from engines.image_gen_engine import *
 
+
+class HomeWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("MyStoryPal")
+        self.resize(980, 680)
+
+        # 배경을 흰색으로 (메인과 시각적 구분)
+        pal = self.palette()
+        pal.setColor(QPalette.Window, QColor(255, 255, 255))
+        self.setPalette(pal)
+
+        home = HomeScreen(logo_path="assets/logo.png")
+        home.startRequested.connect(self._go_main)
+        # 선택: 보조 버튼 연결하려면 여기서 connect하면 됨.
+        self.setCentralWidget(home)
+
+        self._main = None  # MainApp 보관용
+
+    def _go_main(self):
+        # 메인 앱 띄우고 홈은 닫기
+        self._main = MainApp()
+        self._main.show()
+        self.close()
 
 class MainApp(QMainWindow):
     def __init__(self):
@@ -124,8 +149,19 @@ class MainApp(QMainWindow):
     def onHomeClicked(self):
         """홈 버튼 클릭"""
         self.navigationBar.setActiveButton("home")
-        QMessageBox.information(self, "홈", "홈 기능이 구현될 예정입니다.")
-    
+        # 저장 여부 확인이 필요하면 아래 주석 해제해서 사용 (선택)
+        # if self.story_pages_list:
+        #     r = QMessageBox.question(self, "확인", "작성 중인 스토리를 저장하지 않고 홈으로 이동할까요?",
+        #                              QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        #     if r != QMessageBox.Yes:
+        #         return
+
+        # HomeWindow를 띄우고 현재 MainApp을 종료
+        # HomeWindow는 이 파일에 정의되어 있다고 가정 (import 불필요)
+        self._homeWindow = HomeWindow()
+        self._homeWindow.show()
+        self.close()
+        
     def onSettingsClicked(self):
         """설정 버튼 클릭"""
         self.navigationBar.setActiveButton("settings")
@@ -186,7 +222,7 @@ class MainApp(QMainWindow):
 
         if kind == "story_line":
             # AI 문법 수정 메시지
-            self.chatArea.addMessage(f"문법 수정: {text}", is_user=False, message_type="correction")
+            self.chatArea.addMessage(f"Grammar Correction: {text}", is_user=False, message_type="correction")
             self._append_to_story(text.strip())
 
         elif kind == "ai_suggestion":
@@ -342,6 +378,6 @@ class MainApp(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = MainApp()
+    window = HomeWindow()
     window.show()
     sys.exit(app.exec())

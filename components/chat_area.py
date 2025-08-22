@@ -416,6 +416,9 @@ class ChatArea(QFrame):
         self.btnSendMessage = QPushButton("🚀 Send and Continue", self)
         self.btnSendMessage.setObjectName("btnSendMessage")
         self.btnSendMessage.setFixedHeight(50)
+        self.btnSendMessage.setCursor(Qt.PointingHandCursor)
+
+
         
         font_btn = QFont()
         font_btn.setFamilies(["Pretendard", "Arial"])
