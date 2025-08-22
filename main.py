@@ -3,8 +3,8 @@ import sys, re, json, textwrap, random, string, collections
 from pathlib import Path
 from typing import Dict, List
 
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QHBoxLayout, QWidget
-from PySide6.QtCore import Qt, QSignalBlocker
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox
+from PySide6.QtCore import QSignalBlocker
 from PySide6.QtGui import QPalette, QBrush, QColor
 
 # 컴포넌트 임포트
@@ -39,6 +39,7 @@ class HomeWindow(QMainWindow):
         self.setCentralWidget(home)
 
         self._main = None  # MainApp 보관용
+
 
     def _go_main(self):
         # 메인 앱 띄우고 홈은 닫기

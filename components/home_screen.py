@@ -2,15 +2,17 @@
 # -*- coding: utf-8 -*-
 try:
     from PySide6 import QtCore, QtGui, QtWidgets
-    from PySide6.QtCore import Qt
+    from PySide6.QtCore import Qt, QSignalBlocker, QPoint, QTimer
+    from PySide6.QtGui import QPalette, QBrush, QColor, QPainter
+    from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QHBoxLayout, QWidget
     Signal = QtCore.Signal
 except ImportError:
     from PyQt5 import QtCore, QtGui, QtWidgets  # type: ignore
-    from PyQt5.QtCore import Qt  # type: ignore
+    from PyQt5.QtCore import Qt, QPoint, QTimer  # type: ignore
+    from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QHBoxLayout, QWidget # type: ignore
     Signal = QtCore.pyqtSignal  # type: ignore
 
 import os
-
 
 class HomeScreen(QtWidgets.QWidget):
     startRequested = Signal()
@@ -28,7 +30,7 @@ class HomeScreen(QtWidgets.QWidget):
     # ---------------- UI ----------------
     def _build_ui(self, logo_path: str):
         root = QtWidgets.QVBoxLayout(self)
-        root.setContentsMargins(32, 32, 32, 32)
+        root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
         # 배경을 채우는 컨테이너
@@ -37,6 +39,12 @@ class HomeScreen(QtWidgets.QWidget):
         bg_layout = QtWidgets.QVBoxLayout(bg)
         bg_layout.setContentsMargins(0, 0, 0, 0)
         bg_layout.setSpacing(0)
+
+        # 별똥별 오버레이
+        self.star_overlay = StarOverlay(bg)
+        self.star_overlay.lower()  # 기본은 Card보다 밑, 필요하면 raise 조정
+        self.star_overlay.resize(bg.size())
+        bg.resizeEvent = lambda e: self.star_overlay.resize(bg.size())
 
         # 중앙 카드
         card = QtWidgets.QFrame(bg)
@@ -218,3 +226,76 @@ class HomeScreen(QtWidgets.QWidget):
                 font-size: 12px;
             }
         """)
+
+class StarOverlay(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.stars = []
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.animate)
+        self.timer.start(30)
+
+        self.spawn_timer = QTimer(self)
+        self.spawn_timer.timeout.connect(self.spawn_star)
+        self.spawn_timer.start(1800)  # 듬성듬성 (1.8초 간격)
+
+    def spawn_star(self):
+        import random
+        size = random.uniform(1.0, 1.6)  # 작은 별
+        # 출발 위치: 윗변 전체 + 좌측 일부
+        if random.random() < 0.5:
+            x = random.randint(0, self.width())
+            y = -20
+        else:
+            x = -20
+            y = random.randint(0, self.height() // 2)
+
+        self.stars.append({
+            'x': float(x), 'y': float(y),
+            'vx': 4.0, 'vy': 4.0,   # 방향 고정 (↘)
+            'size': size, 'opacity': 1.0,
+            'length': 120
+        })
+
+    def animate(self):
+        for star in self.stars[:]:
+            star['x'] += star['vx']
+            star['y'] += star['vy']
+            star['opacity'] -= 0.01
+
+            if (star['x'] > self.width() + 50 or
+                star['y'] > self.height() + 50 or
+                star['opacity'] <= 0):
+                self.stars.remove(star)
+
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        for star in self.stars:
+            head_x, head_y = int(star['x']), int(star['y'])
+            tail_x = head_x - int(star['vx'] * star['length'])
+            tail_y = head_y - int(star['vy'] * star['length'])
+
+            # 꼬리: 머리쪽 두껍고 뒤로 갈수록 얇아짐
+            grad = QtGui.QLinearGradient(tail_x, tail_y, head_x, head_y)
+            grad.setColorAt(0.0, QColor(255, 255, 255, 0))   # 꼬리 끝 투명
+            grad.setColorAt(1.0, QColor(255, 255, 255, int(star['opacity'] * 200)))
+
+            # 머리쪽 두껍고, 꼬리쪽 얇게 (펜 두께 조절)
+            pen = QtGui.QPen(QBrush(grad), star['size'] * 2.5, Qt.SolidLine, Qt.RoundCap)
+            painter.setPen(pen)
+            painter.drawLine(tail_x, tail_y, head_x, head_y)
+
+            # 별(머리)
+            painter.setBrush(QColor(255, 255, 255, int(star['opacity'] * 255)))
+            painter.setPen(Qt.NoPen)
+            painter.drawEllipse(head_x - int(star['size']/2),
+                                head_y - int(star['size']/2),
+                                int(star['size']),
+                                int(star['size']))
