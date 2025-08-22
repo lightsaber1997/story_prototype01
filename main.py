@@ -226,7 +226,7 @@ class MainApp(QMainWindow):
         """이미지 업로드 입력 처리 (OCR 목업)"""
         # TODO: 나중에 AI 붙이면 여기서 호출
         # ai.convert_text(file_path)
-        mock_text = f"[Mock] Converted text from {os.path.basename(file_path)}"
+        mock_text = f"[Mock] Once upon a time, there was a converted text from {os.path.basename(file_path)}"
 
         # 사용자 채팅창에 표시
         self.chatArea.addMessage(mock_text, is_user=True)

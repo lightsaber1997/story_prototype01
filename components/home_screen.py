@@ -10,6 +10,7 @@ except ImportError:
     Signal = QtCore.pyqtSignal  # type: ignore
 
 import os
+from components.image_upload_dialog import ImageUploadDialog
 
 
 class HomeScreen(QtWidgets.QWidget):
@@ -116,11 +117,15 @@ class HomeScreen(QtWidgets.QWidget):
 
     # Upload Image
     def _onUploadClicked(self):
-        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, "이미지 선택", "", "Images (*.png *.jpg *.jpeg *.bmp)"
-        )
-        if file_path:
-            self.imageUploaded.emit(file_path)
+        # 파일 경로 직접 넣는 버전
+        # file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+        #     self, "이미지 선택", "", "Images (*.png *.jpg *.jpeg *.bmp)"
+        # )
+        # if file_path:
+        #     self.imageUploaded.emit(file_path)
+        dialog = ImageUploadDialog(self)
+        dialog.fileSelected.connect(self.imageUploaded.emit)
+        dialog.exec()
     # ---------------- Style ----------------
     def _apply_styles(self):
         self.setStyleSheet("""
