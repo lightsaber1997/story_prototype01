@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton, QScrollArea, QFileDialog)
 from pathlib import Path
 from components.fx.typewriter_effect import TypewriterEffect
+from components.http_stream_worker import HttpStreamWorker
 from tts.voice_type import VoiceType
 from tts.tts_controller import TTSController
 from utils.export_pdf import export_storybook
@@ -15,6 +16,9 @@ class StorybookArea(QFrame):
     # 시그널 정의
     pageChanged = Signal(int)  # 페이지 변경 시그널
     storySaved = Signal()      # 스토리 저장 시그널
+    streamStarted = Signal()   # HTTP 스트리밍 시작 시그널
+    streamFinished = Signal()  # HTTP 스트리밍 완료 시그널
+    streamError = Signal(str)  # HTTP 스트리밍 에러 시그널
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -30,6 +34,11 @@ class StorybookArea(QFrame):
         self.tts_rate = 160
         self.tts_mode = VoiceType.AMERICAN_WOMAN
         self.tts_controller = TTSController(self)
+        
+        # HTTP Streaming
+        self.http_worker = None
+        self.server_url = "http://localhost:8080"
+        self.is_streaming = False
 
         self.setupUI()
         self.connectSignals()
@@ -618,21 +627,43 @@ class StorybookArea(QFrame):
     def previousPage(self):
         """이전 페이지로 이동"""
         if self.current_page > 0:
+            # Stop any ongoing operations
             if hasattr(self, "_typer"):
                 self._typer.stop()
             self.stopTTS()
+            self.stopHttpStream()  # Stop HTTP streaming when changing pages
+            
             self.current_page -= 1
             self.updatePageDisplay()
+            
+            # Restore cached text for this page
+            cached_text = self._page_texts.get(self.current_page, "")
+            if cached_text:
+                self.textContent.setText(cached_text)
+            else:
+                self.textContent.setText("")
+                
             self.pageChanged.emit(self.current_page)
     
     def nextPage(self):
         """다음 페이지로 이동"""
         if self.current_page < self.total_pages - 1:
+            # Stop any ongoing operations
             if hasattr(self, "_typer"):
                 self._typer.stop()
             self.stopTTS()
+            self.stopHttpStream()  # Stop HTTP streaming when changing pages
+            
             self.current_page += 1
             self.updatePageDisplay()
+            
+            # Restore cached text for this page
+            cached_text = self._page_texts.get(self.current_page, "")
+            if cached_text:
+                self.textContent.setText(cached_text)
+            else:
+                self.textContent.setText("")
+                
             self.pageChanged.emit(self.current_page)
     
     def updatePageDisplay(self):
@@ -776,3 +807,106 @@ class StorybookArea(QFrame):
         if not filename:
             return
         export_storybook(self, filename)
+
+    def startHttpStream(self, prompt: str, page: int = None):
+        """Start HTTP streaming from C++ server for story generation"""
+        if self.is_streaming:
+            print("[StorybookArea] Already streaming, stopping previous stream...")
+            self.stopHttpStream()
+
+        if page is None:
+            page = self.current_page
+
+        print(f"[StorybookArea] Starting HTTP stream for page {page} with prompt: {prompt[:50]}...")
+        
+        # Stop any ongoing typewriter effect
+        if hasattr(self._typer, "stop"):
+            self._typer.stop()
+        
+        # Stop TTS if running
+        self.stopTTS()
+        
+        # Clear current text for this page if starting new generation
+        self._page_texts[page] = ""
+        self.textContent.setText("")
+        
+        # Create and configure HTTP worker
+        self.http_worker = HttpStreamWorker(prompt, self.server_url)
+        self.http_worker.token_received.connect(lambda token: self._appendToken(token, page))
+        self.http_worker.chunk_received.connect(self._onChunkReceived)
+        self.http_worker.error_occurred.connect(self._onStreamError)
+        self.http_worker.started.connect(self._onStreamStarted)
+        self.http_worker.finished.connect(self._onStreamFinished)
+        
+        self.is_streaming = True
+        self.http_worker.start()
+
+    def stopHttpStream(self):
+        """Stop current HTTP streaming"""
+        if self.http_worker and self.http_worker.isRunning():
+            print("[StorybookArea] Stopping HTTP stream...")
+            self.http_worker.stop()
+            self.http_worker.wait(3000)  # Wait up to 3 seconds
+            if self.http_worker.isRunning():
+                self.http_worker.terminate()
+                self.http_worker.wait(1000)
+        
+        self.is_streaming = False
+        self.http_worker = None
+
+    def _appendToken(self, token: str, page: int):
+        """Append received token to the story text"""
+        if page != self.current_page:
+            # Token for different page, just cache it
+            if page not in self._page_texts:
+                self._page_texts[page] = ""
+            self._page_texts[page] += token
+            return
+
+        # Update current page text
+        if page not in self._page_texts:
+            self._page_texts[page] = ""
+        
+        self._page_texts[page] += token
+        
+        # Update UI - append to current display
+        current_text = self.textContent.text()
+        new_text = current_text + token
+        self.textContent.setText(new_text)
+        
+        # Auto-scroll to bottom as new content arrives
+        if hasattr(self, "textScrollArea"):
+            scrollbar = self.textScrollArea.verticalScrollBar()
+            scrollbar.setValue(scrollbar.maximum())
+
+    def _onChunkReceived(self, chunk: str):
+        """Handle raw chunk reception (for debugging)"""
+        print(f"[StorybookArea] Chunk received: {chunk[:50]}...")
+
+    def _onStreamStarted(self):
+        """Handle stream start event"""
+        print("[StorybookArea] HTTP stream started")
+        self.streamStarted.emit()
+
+    def _onStreamFinished(self):
+        """Handle stream completion"""
+        print("[StorybookArea] HTTP stream finished")
+        self.is_streaming = False
+        self.http_worker = None
+        self.streamFinished.emit()
+
+    def _onStreamError(self, error_message: str):
+        """Handle stream error"""
+        print(f"[StorybookArea] HTTP stream error: {error_message}")
+        self.is_streaming = False
+        self.http_worker = None
+        self.streamError.emit(error_message)
+
+    def isStreaming(self) -> bool:
+        """Check if currently streaming from HTTP server"""
+        return self.is_streaming
+
+    def setServerUrl(self, url: str):
+        """Set the C++ server URL"""
+        self.server_url = url
+        print(f"[StorybookArea] Server URL set to: {url}")
