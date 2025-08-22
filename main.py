@@ -266,9 +266,7 @@ class MainApp(QMainWindow):
 
         elif payload["type"] == "error":
             QMessageBox.critical(self, "이미지 생성 오류", f"이미지 생성에 실패했습니다:\n{payload['error']}")
-            if page_idx in self._image_gen_in_progress:
-                self._image_gen_in_progress.remove(page_idx)
-    
+
     # ========== 스토리 관리 ==========
     def _append_to_story(self, segment: str) -> None:
         segment = segment.strip()
