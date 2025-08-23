@@ -1,4 +1,5 @@
 # ── stdlib
+import os
 import sys, re, json, textwrap, random, string, collections
 from pathlib import Path
 from typing import Dict, List
@@ -28,13 +29,14 @@ class HomeWindow(QMainWindow):
         self.setWindowTitle("MyStoryPal")
         self.resize(980, 680)
 
-        # 배경을 흰색으로 (메인과 시각적 구분)
+        # 배경
         pal = self.palette()
         pal.setColor(QPalette.Window, QColor(255, 255, 255))
         self.setPalette(pal)
 
         home = HomeScreen(logo_path="assets/logo.png")
-        home.startRequested.connect(self._go_main)
+        # home.startRequested.connect(self._go_main)
+        home.imageUploaded.connect(self._onImageUploaded)
         # 선택: 보조 버튼 연결하려면 여기서 connect하면 됨.
         self.setCentralWidget(home)
 
@@ -46,6 +48,13 @@ class HomeWindow(QMainWindow):
         self._main = MainApp()
         self._main.show()
         self.close()
+
+    def _onImageUploaded(self, file_path: str):
+        # execute MainApp + deliver image
+        self._main = MainApp()
+        self._main.show()
+        self.close()
+        self._main.handleImageInput(file_path)
 
 class MainApp(QMainWindow):
     def __init__(self):
@@ -213,6 +222,20 @@ class MainApp(QMainWindow):
     def onStorySaved(self):
         """스토리 저장 처리"""
         QMessageBox.information(self, "저장 완료", "스토리북이 성공적으로 저장되었습니다!")
+
+    def handleImageInput(self, file_path: str):
+        """이미지 업로드 입력 처리 (OCR 목업)"""
+        # TODO: 나중에 AI 붙이면 여기서 호출
+        # ai.convert_text(file_path)
+        mock_text = f"[Mock] Once upon a time, there was a converted text from {os.path.basename(file_path)}"
+
+        # 사용자 채팅창에 표시
+        self.chatArea.addMessage(mock_text, is_user=True)
+
+        # 실제 AI 호출처럼 operate 이벤트 발생
+        if hasattr(self, 'chat_controller'):
+            self.chat_controller.operate.emit(mock_text)
+
     
     # ========== AI 응답 처리 ==========
     
