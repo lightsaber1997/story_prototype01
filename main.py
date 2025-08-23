@@ -16,8 +16,7 @@ from components.settings_dialog import SettingsDialog
 from components.home_screen import HomeScreen
 
 # AI 엔진 임포트
-from engines.phi3_mini_engine import Phi3MiniEngine
-from engines.chat_engine import *
+from core.llm_factory import get_chat_controller
 import format_helper
 from engines.stable_engine import StableV15Engine
 from engines.image_gen_engine import *
@@ -42,6 +41,8 @@ class HomeWindow(QMainWindow):
 
         self._main = None  # MainApp 보관용
 
+        # 스트리밍 버퍼 (UI 업데이트용)
+        self._stream_buffer = ""
 
     def _go_main(self):
         # 메인 앱 띄우고 홈은 닫기
@@ -111,10 +112,11 @@ class MainApp(QMainWindow):
     def setupAI(self):
         """AI 엔진 설정"""
         try:
-            # llm 모델 가져오기 (phi3_mini 활용)
-            from core.llm_factory import get_llm_engine
-            self.llm_engine = get_llm_engine()
-            self.chat_controller = ChatController(self._on_chat_reply, self.llm_engine)
+            # llm 모델 가져오고 컨트롤러 설정
+            self.chat_controller = get_chat_controller(
+                result_callback=self._on_chat_reply,
+                token_callback=self._on_token_received  # 토큰 단위 업데이트 받을 때
+            )
 
             # 이미지 생성 엔진
             self.image_gen_engine = StableV15Engine()
@@ -227,10 +229,8 @@ class MainApp(QMainWindow):
         """이미지 업로드 입력 처리 (OCR 목업)"""
         # TODO: 나중에 AI 붙이면 여기서 호출
         # ai.convert_text(file_path)
+        # 사용자 채팅창에 표시하지 않음
         mock_text = f"[Mock] Once upon a time, there was a converted text from {os.path.basename(file_path)}"
-
-        # 사용자 채팅창에 표시
-        self.chatArea.addMessage(mock_text, is_user=True)
 
         # 실제 AI 호출처럼 operate 이벤트 발생
         if hasattr(self, 'chat_controller'):
@@ -238,11 +238,20 @@ class MainApp(QMainWindow):
 
     
     # ========== AI 응답 처리 ==========
-    
+    def _on_token_received(self, token: str):
+        """스트리밍 토큰 단위로 UI 업데이트"""
+        # 토큰 누적
+        self._stream_buffer += token
+        # ChatArea에 스트리밍 업데이트 요청
+        self.chatArea.updateStreamingMessage(self._stream_buffer)
+
     def _on_chat_reply(self, payload: Dict[str, str]) -> None:
-        """AI 채팅 응답 처리"""
+        """최종 응답 (완료 시점)"""
         kind = payload["type"]
         text = payload["text"]
+
+        # 스트리밍 버퍼 초기화
+        self._stream_buffer = ""
 
         if kind == "story_line":
             # AI 문법 수정 메시지
@@ -257,7 +266,7 @@ class MainApp(QMainWindow):
         elif kind == "chat_answer":
             # AI 일반 답변 메시지
             self.chatArea.addMessage(text, is_user=False, message_type="chat")
-        
+
         # 이미지 생성 조건 확인
         if not hasattr(self, "_image_gen_in_progress"):
             self._image_gen_in_progress = set()

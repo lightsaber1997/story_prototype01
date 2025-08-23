@@ -531,3 +531,34 @@ class ChatArea(QFrame):
     def setInputText(self, text: str):
         """입력 텍스트 설정"""
         self.textEdit_childStory.setPlainText(text)
+
+    def updateStreamingMessage(self, text: str, role: str = "chat"):
+        """
+        마지막 AI 메시지를 실시간으로 갱신 (스트리밍).
+        없으면 새로 추가하고, 있으면 덮어쓴다.
+        """
+        count = self.chatList.count()
+        if count == 0:
+            # 대화가 비어있으면 새 메시지 추가
+            self.addMessage(text, is_user=False, message_type=role)
+            return
+
+        # 마지막 메시지 위젯 가져오기
+        last_item = self.chatList.item(count - 1)
+        last_widget = self.chatList.itemWidget(last_item)
+
+        if last_widget is None:
+            # 안전하게 새 메시지 추가
+            self.addMessage(text, is_user=False, message_type=role)
+            return
+
+        # QLabel 찾아서 텍스트 갱신
+        label = last_widget.findChild(QLabel)
+        if label:
+            label.setText(text)
+            label.adjustSize()
+            last_item.setSizeHint(last_widget.sizeHint())
+            self.chatList.scrollToBottom()
+        else:
+            # 라벨 못 찾으면 새로 추가
+            self.addMessage(text, is_user=False, message_type=role)

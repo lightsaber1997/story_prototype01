@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton, QScrollArea, QFileDialog)
 from pathlib import Path
 from components.fx.typewriter_effect import TypewriterEffect
-from components.http_stream_worker import HttpStreamWorker
+from client.http_stream_worker import HttpStreamWorker
 from tts.voice_type import VoiceType
 from tts.tts_controller import TTSController
 from utils.export_pdf import export_storybook
