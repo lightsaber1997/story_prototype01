@@ -5,7 +5,7 @@ from engines.server_engine import ServerEngine
 from engines.chat_engine import ChatController
 from typing import Optional, Callable
 
-def get_engine():
+def get_llm_engine():
     config = load_config()
     engine_type = config["llm"]["engine"].lower()
     if engine_type == "gpt":
@@ -20,7 +20,7 @@ def get_engine():
 
 def get_chat_controller(result_callback: Callable, token_callback: Optional[Callable] = None):
     """Public API: create ChatController with proper engine"""
-    engine = get_engine()
+    engine = get_llm_engine()
     return ChatController(
         result_callback=result_callback,
         engine=engine,
@@ -31,13 +31,13 @@ def get_chat_controller(result_callback: Callable, token_callback: Optional[Call
 def supports_streaming():
     """Check if current engine supports streaming"""
     config = load_config()
-    if not config["llm"].get("streaming", {}).get("enabled", True):
+    if not config["llm"].get("chat_response_streaming", {}).get("enabled", True):
         return False
-    engine = get_engine()
+    engine = get_llm_engine()
     return hasattr(engine, "generate_reply_stream")
 
 
 def is_streaming_enabled():
     """Check if streaming is enabled in config"""
     config = load_config()
-    return config["llm"].get("streaming", {}).get("enabled", True)
+    return config["llm"].get("chat_response_streaming", {}).get("enabled", True)

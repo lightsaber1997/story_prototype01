@@ -7,5 +7,5 @@ llm:
     endpoint: "/generate"
     
   # 스트림 설정
-  streaming:
+  chat_response_streaming:
     enabled: true

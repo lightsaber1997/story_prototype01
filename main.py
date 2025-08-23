@@ -114,8 +114,8 @@ class MainApp(QMainWindow):
         try:
             # llm 모델 가져오고 컨트롤러 설정
             self.chat_controller = get_chat_controller(
-                result_callback=self._on_chat_reply,
-                token_callback=self._on_token_received  # 토큰 단위 업데이트 받을 때
+                result_callback=self._on_ai_event,
+                token_callback=self._on_ai_event  # 토큰 단위 업데이트 받을 때
             )
 
             # 이미지 생성 엔진
@@ -236,48 +236,60 @@ class MainApp(QMainWindow):
         if hasattr(self, 'chat_controller'):
             self.chat_controller.operate.emit(mock_text)
 
-    
-    # ========== AI 응답 처리 ==========
-    def _on_token_received(self, token: str):
-        """스트리밍 토큰 단위로 UI 업데이트"""
-        # 토큰 누적
-        self._stream_buffer += token
-        # ChatArea에 스트리밍 업데이트 요청
-        self.chatArea.updateStreamingMessage(self._stream_buffer)
+    def _on_ai_event(self, payload_or_token):
+        """
+        AI 이벤트 처리 통합 핸들러
+        - str  → 스트리밍 토큰 단위 (중간 UI 업데이트)
+        - dict → 최종 응답 (완료 시점)
+        """
+        if isinstance(payload_or_token, str):
+            # ========== 스트리밍 토큰 처리 ==========
+            # ===== 스트리밍 토큰 처리 =====
+            token = payload_or_token
 
-    def _on_chat_reply(self, payload: Dict[str, str]) -> None:
-        """최종 응답 (완료 시점)"""
-        kind = payload["type"]
-        text = payload["text"]
+            # 특정 문자열 필터링
+            skip_keywords = ["{", "}", '"kind"', '"fixed_line"', '"answer"', ":", ","]
+            if any(kw in token for kw in skip_keywords):
+                return  # UI에 표시하지 않음
 
-        # 스트리밍 버퍼 초기화
-        self._stream_buffer = ""
+            # 토큰 누적
+            self._stream_buffer += token
+            # ChatArea에 스트리밍 업데이트 요청
+            self.chatArea.updateStreamingMessage(self._stream_buffer)
 
-        if kind == "story_line":
-            # AI 문법 수정 메시지
-            self.chatArea.addMessage(f"Grammar Correction: {text}", is_user=False, message_type="correction")
-            self._append_to_story(text.strip())
+        elif isinstance(payload_or_token, dict):
+            # ========== 최종 응답 처리 ==========
+            kind = payload_or_token["type"]
+            text = payload_or_token["text"]
 
-        elif kind == "ai_suggestion":
-            # AI 스토리 제안 메시지
-            self.chatArea.addMessage(text, is_user=False, message_type="story")
-            self._append_to_story(text.strip())
+            # 스트리밍 버퍼 초기화 (다음 대화를 위해 초기화)
+            self._stream_buffer = ""
 
-        elif kind == "chat_answer":
-            # AI 일반 답변 메시지
-            self.chatArea.addMessage(text, is_user=False, message_type="chat")
+            if kind == "story_line":
+                # AI 문법 수정 메시지
+                self.chatArea.addMessage(f"Grammar Correction: {text}", is_user=False, message_type="correction")
+                self._append_to_story(text.strip())
 
-        # 이미지 생성 조건 확인
-        if not hasattr(self, "_image_gen_in_progress"):
-            self._image_gen_in_progress = set()
+            elif kind == "ai_suggestion":
+                # AI 스토리 제안 메시지
+                self.chatArea.addMessage(text, is_user=False, message_type="story")
+                self._append_to_story(text.strip())
 
-        # 현재 페이지에 대해 아직 이미지 없고, 생성도 안 하고 있다면 → 생성 시작
-        if (
-            self.current_page_idx not in self.page_images
-            and self.current_page_idx not in self._image_gen_in_progress
-        ):
-            self.checkImageGeneration()
-    
+            elif kind == "chat_answer":
+                # AI 일반 답변 메시지
+                self.chatArea.addMessage(text, is_user=False, message_type="chat")
+
+            # ========== 이미지 생성 조건 확인 ==========
+            if not hasattr(self, "_image_gen_in_progress"):
+                self._image_gen_in_progress = set()
+
+            # 현재 페이지에 대해 아직 이미지 없고, 생성도 안 하고 있다면 → 생성 시작
+            if (
+                    self.current_page_idx not in self.page_images
+                    and self.current_page_idx not in self._image_gen_in_progress
+            ):
+                self.checkImageGeneration()
+
     def _on_image_gen_ready(self, payload: dict):
         """이미지 생성 완료 처리"""
         if payload["type"] == "image_generated":

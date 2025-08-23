@@ -68,6 +68,7 @@ class ChatWorker(QObject):
                         Continue this children's story in 2 lively sentences. Make sure the reply forms a complete sentence and ends with a period.
                         Respond with EXACTLY ONE JSON object, on a single line, no code block
                         markers, no extra text. 
+                        {"first": "first sentence", "second": "second sentence"},
                         """
                     ).strip(),
                 },
@@ -87,11 +88,8 @@ class ChatWorker(QObject):
                     max_new_tokens=120
                 )
         else:
-            if self.use_streaming:
-                self._handle_streaming_chat(data, user_text)
-            else:
-                answer = self._nl2space(data.get("answer", ""))
-                self.resultReady.emit({"type": "chat_answer", "text": answer + " What's your next line?"})
+            answer = self._nl2space(data.get("answer", ""))
+            self.resultReady.emit({"type": "chat_answer", "text": answer + " What's your next line?"})
 
     def _stream_and_collect(self, prompt, start_event, complete_event, max_new_tokens):
         """공통 스트리밍 수집"""
@@ -107,29 +105,12 @@ class ChatWorker(QObject):
         self.resultReady.emit({"type": complete_event, "text": clean})
 
     def _non_stream_and_emit(self, prompt, event_type, max_new_tokens):
-        """공통 비스트리밍 처리"""
+        """비스트리밍 처리"""
         raw = self._nl2space(self.engine.generate_reply(prompt, max_new_tokens=max_new_tokens))
         if event_type.startswith("ai_suggestion"):
             self.story.append(raw)
         self.resultReady.emit({"type": event_type, "text": raw})
 
-    def _handle_streaming_chat(self, data, user_text):
-        """Handle chat response with streaming"""
-        if data.get("answer"):
-            answer = self._nl2space(data.get("answer", ""))
-            self.resultReady.emit({"type": "chat_answer", "text": answer + " What's your next line?"})
-            return
-
-        chat_prompt = [
-            {"role": "system", "content": "You are a helpful assistant in a children's story app. Answer briefly and ask what's their next story line."},
-            {"role": "user", "content": user_text},
-        ]
-        self._stream_and_collect(
-            chat_prompt,
-            start_event="chat_answer_start",
-            complete_event="chat_answer_complete",
-            max_new_tokens=80,
-        )
     @staticmethod
     def _safe_json(raw: str, fallback: dict) -> dict:
         """안전한 JSON 추출"""
