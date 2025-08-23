@@ -13,12 +13,14 @@ except ImportError:
     Signal = QtCore.pyqtSignal  # type: ignore
 
 import os
+from components.image_upload_dialog import ImageUploadDialog
 
 class HomeScreen(QtWidgets.QWidget):
     startRequested = Signal()
     openRecentRequested = Signal()
     settingsRequested = Signal()
     tutorialRequested = Signal()
+    imageUploaded = Signal(str) #str: Image Path
 
     def __init__(self, logo_path: str = "assets/logo.svg", parent=None):
         super().__init__(parent)
@@ -88,39 +90,13 @@ class HomeScreen(QtWidgets.QWidget):
         card_layout.addWidget(subtitle)
 
         # CTA 버튼
-        cta = QtWidgets.QPushButton("Let's Start!", card)
+        cta = QtWidgets.QPushButton("Start with my Image!", card)
         cta.setObjectName("PrimaryButton")
         cta.setMinimumHeight(48)
         cta.setCursor(Qt.PointingHandCursor)
-        cta.clicked.connect(self.startRequested.emit)
+        # cta.clicked.connect(self.startRequested.emit)
+        cta.clicked.connect(self._onUploadClicked)
         card_layout.addWidget(cta)
-
-        # 보조 버튼들
-        # extras = QtWidgets.QHBoxLayout()
-        # extras.setSpacing(12)
-        # extras.setContentsMargins(0, 8, 0, 0)
-
-        # btn_recent = QtWidgets.QPushButton("최근 프로젝트 열기", card)
-        # btn_recent.setObjectName("GhostButton")
-        # btn_recent.setCursor(Qt.PointingHandCursor)
-        # btn_recent.clicked.connect(self.openRecentRequested.emit)
-
-        # btn_settings = QtWidgets.QPushButton("설정", card)
-        # btn_settings.setObjectName("GhostButton")
-        # btn_settings.setCursor(Qt.PointingHandCursor)
-        # btn_settings.clicked.connect(self.settingsRequested.emit)
-
-        # btn_tutorial = QtWidgets.QPushButton("튜토리얼", card)
-        # btn_tutorial.setObjectName("GhostButton")
-        # btn_tutorial.setCursor(Qt.PointingHandCursor)
-        # btn_tutorial.clicked.connect(self.tutorialRequested.emit)
-
-        # extras.addStretch(1)
-        # extras.addWidget(btn_recent)
-        # extras.addWidget(btn_settings)
-        # extras.addWidget(btn_tutorial)
-        # extras.addStretch(1)
-        # card_layout.addLayout(extras)
 
         # 푸터 라벨(버전 표기 등)
         footer = QtWidgets.QLabel("v0.9 • Stable Diffusion v1.5 • Phi-3 Mini", card)
@@ -147,6 +123,17 @@ class HomeScreen(QtWidgets.QWidget):
         cta_shortcut2 = QtGui.QShortcut(QtGui.QKeySequence(Qt.Key_Enter), self)
         cta_shortcut2.activated.connect(self.startRequested.emit)
 
+    # Upload Image
+    def _onUploadClicked(self):
+        # 파일 경로 직접 넣는 버전
+        # file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+        #     self, "이미지 선택", "", "Images (*.png *.jpg *.jpeg *.bmp)"
+        # )
+        # if file_path:
+        #     self.imageUploaded.emit(file_path)
+        dialog = ImageUploadDialog(self)
+        dialog.fileSelected.connect(self.imageUploaded.emit)
+        dialog.exec()
     # ---------------- Style ----------------
     def _apply_styles(self):
         self.setStyleSheet("""
