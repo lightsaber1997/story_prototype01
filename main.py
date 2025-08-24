@@ -71,7 +71,6 @@ class MainApp(QMainWindow):
 
         # 초기 상태 설정
         self.updateUI()
-        self._stream_buffer = ""
 
         self._new_story_started = False
 
@@ -120,7 +119,7 @@ class MainApp(QMainWindow):
 
             # 시그널 연결
             self.chat_controller.worker.token_chat_Ready.connect(self._on_token_chat)
-            self.chat_controller.worker.token_story_fixed_line_Ready.connect(self._on_token_story_fixed)
+            self.chat_controller.worker.token_correction_Ready.connect(self._on_token_story_fixed)
             self.chat_controller.worker.token_story_continue_Ready.connect(self._on_token_story_continue)
 
 
@@ -249,40 +248,17 @@ class MainApp(QMainWindow):
             }))
 
     def _on_chat_reply(self, payload: Dict[str, str]) -> None:
-        # 여긴 버블을 건드리지 말고, 디버그/완료 처리만
         kind = payload.get("type")
         text = payload.get("text", "")
         print(f"[AI COMPLETE] {kind}: {text}")
+
         if kind == "story_answer":
             self._append_to_story(text.strip())
             self.checkImageGeneration()
 
-        self._stream_buffer = ""
-        # 이미지 생성 조건 확인
-        if not hasattr(self, "_image_gen_in_progress"):
-            self._image_gen_in_progress = set()
-        # """AI 채팅 응답 처리"""
-        # kind = payload["type"]
-        # text = payload["text"]
-        # self._stream_buffer = ""
-        #
-        # if kind == "correction_answer":
-        #     # AI 문법 수정 메시지
-        #     self._stream_buffer_correction = ""
-        #     self.chatArea.addMessage(f"Grammar Correction: {text}", is_user=False, message_type="correction")
-        #     self._append_to_story(text.strip())
-        #
-        # elif kind == "story_answer":
-        #     # AI 스토리 제안 메시지
-        #     self._stream_buffer_story = ""
-        #     self.chatArea.addMessage(text, is_user=False, message_type="story")
-        #     self._append_to_story(text.strip())
-        #
-        # elif kind == "chat_answer":
-        #     # AI 일반 답변 메시지
-        #     self._stream_buffer_chat = ""
-        #     self.chatArea.addMessage(text, is_user=False, message_type="chat")
-        #
+        elif kind == "correction_answer":
+            # grammar correction 완성본도 storybook 교체
+            self._append_to_story(text.strip())
         return
 
     def _on_token_chat(self, text: str):
@@ -293,78 +269,12 @@ class MainApp(QMainWindow):
     def _on_token_story_fixed(self, text: str):
         if not text.strip():
             return
-        self.chatArea.updateStreamingMessage(text, message_type="correction")
+        self.chatArea.updateStreamingMessage(f"Grammar Correction: {text}", message_type="correction")
 
     def _on_token_story_continue(self, text: str):
         if not text.strip():
             return
         self.chatArea.updateStreamingMessage(text, message_type="story")
-
-    #
-    # def _on_token_chat(self, text: str):
-    #     if not text.strip():
-    #         return
-    #     # 요청이 새로 시작했으면 버퍼 초기화
-    #     if not hasattr(self, "_stream_buffer_chat") or self._new_ai_text_started:
-    #         self._stream_buffer_chat = ""
-    #         self._new_ai_text_started = False  # 초기화 플래그 해제
-    #
-    #     self._stream_buffer_chat += text  # 🔑 누적
-    #     self._ensure_ai_bubble("chat")
-    #     self.chatArea.updateStreamingMessage(self._stream_buffer_chat, mode="chat")
-    #
-    # def _on_token_story_fixed(self, text: str):
-    #     if not text.strip():
-    #         return
-    #
-    #     # 요청이 새로 시작했으면 버퍼 초기화
-    #     if not hasattr(self, "_stream_buffer_correction") or self._new_ai_text_started:
-    #         self._stream_buffer_correction = ""
-    #         self._new_ai_text_started = False  # 초기화 플래그 해제
-    #
-    #     self._stream_buffer_correction += text  # 🔑 누적
-    #
-    #     self._ensure_ai_bubble("correction")
-    #     self.chatArea.updateStreamingMessage(self._stream_buffer_correction, mode="correction")
-    #
-    # def _on_token_story_continue(self, text: str):
-    #     if not text.strip():
-    #         return
-    #
-    #     # 요청이 새로 시작했으면 버퍼 초기화
-    #     if not hasattr(self, "_stream_buffer_story") or self._new_ai_text_started:
-    #         self._stream_buffer_story = ""
-    #         self._new_ai_text_started = False  # 초기화 플래그 해제
-    #
-    #     self._stream_buffer_story += text  # 🔑 누적
-    #
-    #     self._ensure_ai_bubble("story")
-    #     self.chatArea.updateStreamingMessage(self._stream_buffer_story, mode="story")
-    #     if not hasattr(self, "_image_gen_in_progress"):
-    #         self._image_gen_in_progress = set()
-    #
-    #         # 현재 페이지에 대해 아직 이미지 없고, 생성도 안 하고 있다면 → 생성 시작
-    #         if (
-    #             self.current_page_idx not in self.page_images
-    #             and self.current_page_idx not in self._image_gen_in_progress
-    #         ):
-    #             self.checkImageGeneration()
-
-    # def _ensure_ai_bubble(self, role: str):
-    #     count = self.chatArea.chatList.count()
-    #     if count == 0:
-    #         self.chatArea.addMessage("", is_user=False, message_type=role)
-    #         return
-    #
-    #     last_item = self.chatArea.chatList.item(count - 1)
-    #     last_widget = self.chatArea.chatList.itemWidget(last_item)
-    #
-    #     # 마지막 버블의 role 가져오기
-    #     last_role = last_widget.property("role") if last_widget else None
-    #
-    #     # 🔑 마지막 role이 다르면 새 버블 추가
-    #     if last_role != role:
-    #         self.chatArea.addMessage("", is_user=False, message_type=role)
 
     def _on_image_gen_ready(self, payload: dict):
         """이미지 생성 완료 처리"""
@@ -388,7 +298,6 @@ class MainApp(QMainWindow):
         elif payload["type"] == "error":
             QMessageBox.critical(self, "이미지 생성 오류", f"이미지 생성에 실패했습니다:\n{payload['error']}")
 
-    # ========== 스토리 관리 ==========
     def _append_to_story(self, segment: str) -> None:
         segment = segment.strip()
         self.story_parts.append(segment)
