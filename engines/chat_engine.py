@@ -16,16 +16,15 @@ class ChatWorker(QObject):
     """Does all LLM calls off-thread."""
 
     resultReady = Signal(dict)
-
-    # Streaming
-    token_story_fixed_line_Ready = Signal(str)
-    token_chat_Ready = Signal(str)
-    token_story_continue_Ready = Signal(str)
+    token_chat_Ready = Signal(str, str)
+    token_story_fixed_line_Ready = Signal(str, str)
+    token_story_continue_Ready = Signal(str, str)
 
     def __init__(self, engine):
         super().__init__()
         self.engine = engine
         self.story: List[str] = []
+        self.is_image = True
 
     @staticmethod
     def is_json_complete(s: str) -> bool:
@@ -49,6 +48,38 @@ class ChatWorker(QObject):
 
     @Slot(str)
     def doWork(self, user_text: str):
+        if self.is_image is True:
+            # TODO: 이야기 만들기
+            story_context = " ".join(self.story[-100:])
+            continue_prompt = [
+                {
+                    "role": "system",
+                    "content": textwrap.dedent("""
+                        Continue this children's story in 2 lively sentences. 
+                        Make sure the reply forms a complete sentence and ends with a period.
+                        Respond with EXACTLY ONE JSON object, on a single line, no code block
+                        markers, no extra text. 
+                        {"first": "first sentence", "second": "second sentence"}
+                    """).strip(),
+                },
+                {"role": "user", "content": story_context},
+            ]
+            story_text = self._stream_and_collect(continue_prompt, "story_continue", 120)
+            try:
+                obj = format_helper.get_first_json(story_text)
+                first = obj.get("first", "").strip()
+                second = obj.get("second", "").strip()
+                if first:
+                    self.story.append(first)
+                if second:
+                    self.story.append(second)
+            except Exception as e:
+                print("JSON parse error in continue:", e, story_text)
+                self.story.append(story_text.strip())  # fallback
+            self.is_image = False
+            return
+
+
         classify_prompt = [
             {
                 "role": "system",
@@ -67,11 +98,13 @@ class ChatWorker(QObject):
             buffer += token
             if self.is_json_complete(buffer):
                 obj = format_helper.get_first_json(buffer)
-                is_story = bool(obj.get("is_story", False))
+                is_story_val = obj.get("is_story", False)
+                is_story = str(is_story_val).lower() == "true"
                 break
 
         if is_story:
             # TODO: fixed_line 구하기
+            print("[AI] is story: True")
             fix_prompt = [
                 {
                     "role": "system",
@@ -84,7 +117,14 @@ class ChatWorker(QObject):
                 },
                 {"role": "user", "content": user_text},
             ]
-            fixed_line = self._stream_and_collect(fix_prompt, "fixed_grammar", 120)
+            fixed_raw = self._stream_and_collect(fix_prompt, "fixed_grammar", 120)
+            try:
+                obj = format_helper.get_first_json(fixed_raw)
+                fixed_line = obj.get("fixed_line", user_text)
+            except Exception as e:
+                print("JSON parse error in fix:", e, fixed_raw)
+                fixed_line = user_text
+
             self.story.append(fixed_line)
 
             # TODO: 이야기 만들기
@@ -102,8 +142,9 @@ class ChatWorker(QObject):
                 },
                 {"role": "user", "content": story_context},
             ]
-            story_continue = self._stream_and_collect(continue_prompt, "story_continue", 120)
-            self.story.append(story_continue)
+            story_text = self._stream_and_collect(continue_prompt, "story_continue", 120)
+            if story_text:
+                self.story.append(story_text)
 
         else:
             # TODO: 일반 답변
@@ -120,23 +161,98 @@ class ChatWorker(QObject):
             ]
             self._stream_and_collect(chat_prompt, "chat", 120)
 
-
+    # def _stream_and_collect(self, prompt, kind, max_new_tokens):
+    #     buffer = ""
+    #     for token in self.engine.generate_reply_stream(prompt, max_new_tokens=max_new_tokens):
+    #         buffer += token
+    #
+    #         if self.is_json_complete(buffer):  # ✅ JSON이 다 닫혔으면
+    #             try:
+    #                 obj = format_helper.get_first_json(buffer)
+    #                 if kind == "fixed_grammar":
+    #                     text = obj.get("fixed_line", "")
+    #                     self.token_story_fixed_line_Ready.emit(text)
+    #                 elif kind == "story_continue":
+    #                     first = obj.get("first", "").strip()
+    #                     second = obj.get("second", "").strip()
+    #                     text = " ".join([s for s in (first, second) if s])
+    #                     self.token_story_continue_Ready.emit(text)
+    #                 elif kind == "chat":
+    #                     text = obj.get("answer", "")
+    #                     self.token_chat_Ready.emit(text)
+    #
+    #                 return text  # ✅ 파싱 성공 → 종료
+    #             except Exception as e:
+    #                 print(f"JSON parse error in {kind}:", e, buffer)
+    #                 # fallback: 그냥 buffer 그대로 표시
+    #                 text = buffer.strip()
+    #                 if kind == "fixed_grammar":
+    #                     self.token_story_fixed_line_Ready.emit(text)
+    #                 elif kind == "story_continue":
+    #                     self.token_story_continue_Ready.emit(text)
+    #                 elif kind == "chat":
+    #                     self.token_chat_Ready.emit(text)
+    #                 return text
+    #
+    #     # fallback: 끝까지 가도 JSON 못 찾음
+    #     return buffer.strip()
+    import re
     def _stream_and_collect(self, prompt, kind, max_new_tokens):
         accumulated = ""
+        prev_len = 0
+        buffer = ""
+        inside_value = False
+
+        print(f"[DEBUG] _stream_and_collect start (kind={kind}, max_new_tokens={max_new_tokens})")
+
         for token in self.engine.generate_reply_stream(prompt, max_new_tokens=max_new_tokens):
             accumulated += token
-            if kind == "fixed_grammar":
-                self.token_story_fixed_line_Ready.emit(token)
-            elif kind == "story_continue":
-                self.token_story_continue_Ready.emit(token)
-            elif kind == "chat":
-                self.token_chat_Ready.emit(token)
+            delta = accumulated[prev_len:]
+            prev_len = len(accumulated)
 
-        clean = self._nl2space(accumulated)
-        self.resultReady.emit({"type": kind, "text": clean})
+            if not delta:
+                continue
+
+            for ch in delta:
+                if not inside_value:
+                    # value 시작 탐지 → :"
+                    if buffer.endswith(':') and ch == '"':
+                        inside_value = True
+                        print(f"[DEBUG] Value start detected at pos={prev_len}")
+                        buffer = ""  # value 누적 버퍼 리셋
+                    else:
+                        buffer += ch
+                else:
+                    # value 종료 탐지 → "
+                    if ch == '"':
+                        text = buffer.strip()
+                        if text:
+                            print(f"[DEBUG] Value end detected → '{text}' (kind={kind})")
+                            if kind == "chat":
+                                self.token_chat_Ready.emit(text, "chat")
+                            elif kind == "story_continue":
+                                self.token_story_continue_Ready.emit(text, "story")
+                            elif kind == "fixed_grammar":
+                                self.token_story_fixed_line_Ready.emit(text, "correction")
+                        buffer = ""
+                        inside_value = False
+                    else:
+                        buffer += ch
+
+        # 혹시 끝나기 전에 버퍼 남아 있으면 마지막으로 출력
+        if inside_value and buffer.strip():
+            text = buffer.strip()
+            print(f"[DEBUG] Stream ended with unfinished value → '{text}' (kind={kind})")
+            if kind == "chat":
+                self.token_chat_Ready.emit(text, "chat")
+            elif kind == "story_continue":
+                self.token_story_continue_Ready.emit(text, "story")
+            elif kind == "fixed_grammar":
+                self.token_story_fixed_line_Ready.emit(text, "correction")
+
+        print(f"[DEBUG] _stream_and_collect done (kind={kind}, total_len={len(accumulated)})")
         return accumulated
 
-    #
     # @Slot(str)
     # def doWork(self, user_input: str):
     #     self._stream_buffer = ""
@@ -160,7 +276,8 @@ class ChatWorker(QObject):
     #         {
     #             "role": "system",
     #             "content": textwrap.dedent("""
-    #                 You are an assistant in a children's story-builder app.
+    #                 You are an assistant in a
+    #                 children's story-builder app.
     #                 Decide whether the user's message is a STORY SENTENCE
     #                 or a QUESTION/CHAT. If it is a story sentence, correct
     #                 grammar/spelling minimally but keep the child's voice.
@@ -292,7 +409,7 @@ class ChatWorker(QObject):
 class ChatController(QObject):
     operate = Signal(str)
 
-    def __init__(self, engine, result_callback, token_callback=None):
+    def __init__(self, engine, result_callback):
         super().__init__()
         self.workerThread = QThread()
         self.worker = ChatWorker(engine)
@@ -303,10 +420,6 @@ class ChatController(QObject):
         self.operate.connect(self.worker.doWork)
         self.worker.resultReady.connect(result_callback)
 
-        if token_callback:
-            self.worker.token_story_fixed_line_Ready.connect(token_callback["story_fixed"])
-            self.worker.token_chat_Ready.connect(token_callback["chat"])
-            self.worker.token_story_continue_Ready.connect(token_callback["story_continue"])
         self.workerThread.start()
         self._closed = False  # 안전 종료 플래그
 

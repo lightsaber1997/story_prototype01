@@ -535,32 +535,26 @@ class ChatArea(QFrame):
 
     def updateStreamingMessage(self, text: str, message_type: str):
         """
-        마지막 AI 메시지를 실시간으로 갱신 (스트리밍).
-        무조건 마지막 버블만 갱신한다.
-        새 버블은 addMessage()로만 만들어야 한다.
+        스트리밍 메시지 UI 업데이트
         """
+        # 마지막 버블 확인
         count = self.chatList.count()
-        if count == 0:
-            # 버블이 전혀 없는 경우엔 그냥 새로 추가
-            self.addMessage(text, is_user=False, message_type=message_type)
-            return
+        if count > 0:
+            last_item = self.chatList.item(count - 1)
+            last_widget = self.chatList.itemWidget(last_item)
 
-        last_item = self.chatList.item(count - 1)
-        last_widget = self.chatList.itemWidget(last_item)
+            # 마지막 버블의 타입을 가져오기
+            last_type = getattr(last_widget, "message_type", None)
 
-        # 마지막 버블이 아예 없으면 그냥 무시 (안 만들고)
-        if last_widget is None:
-            # 안전하게 새 메시지 추가
-            self.addMessage(text, is_user=False, message_type=message_type)
-            return
+            if last_type == message_type:
+                # ✅ 같은 kind면 기존 버블 갱신
+                label = last_widget.findChild(QLabel)
+                if label:
+                    label.setText(text)
+                    label.adjustSize()
+                    last_item.setSizeHint(last_widget.sizeHint())
+                    self.chatList.scrollToBottom()
+                return
 
-        # QLabel 찾아서 텍스트 갱신
-        label = last_widget.findChild(QLabel)
-        if label:
-            label.setText(text)
-            label.adjustSize()
-            last_item.setSizeHint(last_widget.sizeHint())
-            self.chatList.scrollToBottom()
-        else:
-            # 라벨 못 찾으면 새로 추가
-            self.addMessage(text, is_user=False, message_type=message_type)
+        # ✅ kind가 다르거나 버블 없음 → 새 버블 추가
+        self.addMessage(text, is_user=False, message_type=message_type)

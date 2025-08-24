@@ -71,7 +71,8 @@ class MainApp(QMainWindow):
 
         # 초기 상태 설정
         self.updateUI()
-        self._stream_buffer=""
+        self._stream_buffer = ""
+
         self._new_story_started = False
 
     def setupUI(self):
@@ -114,14 +115,14 @@ class MainApp(QMainWindow):
         try:
             # llm 모델 가져오고 컨트롤러 설정
             self.chat_controller = get_chat_controller(
-                result_callback=self._on_chat_reply,
-                token_callback={
-                    "chat": self._on_token_chat,
-                    "story_fixed": self._on_token_story_fixed,
-                    "story_continue": self._on_token_story_continue,
-                }
-                # token_callback=self._on_ai_event  # 토큰 단위 업데이트 받을 때
+                result_callback=self._on_chat_reply
             )
+
+            # 시그널 연결
+            self.chat_controller.worker.token_chat_Ready.connect(self._on_token_chat)
+            self.chat_controller.worker.token_story_fixed_line_Ready.connect(self._on_token_story_fixed)
+            self.chat_controller.worker.token_story_continue_Ready.connect(self._on_token_story_continue)
+
 
             # 이미지 생성 엔진
             self.image_gen_engine = StableV15Engine()
@@ -252,6 +253,14 @@ class MainApp(QMainWindow):
         kind = payload.get("type")
         text = payload.get("text", "")
         print(f"[AI COMPLETE] {kind}: {text}")
+        if kind == "story_answer":
+            self._append_to_story(text.strip())
+            self.checkImageGeneration()
+
+        self._stream_buffer = ""
+        # 이미지 생성 조건 확인
+        if not hasattr(self, "_image_gen_in_progress"):
+            self._image_gen_in_progress = set()
         # """AI 채팅 응답 처리"""
         # kind = payload["type"]
         # text = payload["text"]
@@ -274,48 +283,40 @@ class MainApp(QMainWindow):
         #     self._stream_buffer_chat = ""
         #     self.chatArea.addMessage(text, is_user=False, message_type="chat")
         #
-        # # 이미지 생성 조건 확인
-        # if not hasattr(self, "_image_gen_in_progress"):
-        #     self._image_gen_in_progress = set()
         return
 
     def _on_token_chat(self, text: str):
         if not text.strip():
             return
         # 첫 토큰일 때만 버블 생성
-        if not hasattr(self, "_stream_buffer_chat") or self._new_story_started:
-            self._stream_buffer_chat = ""
+        if not hasattr(self, "_stream_buffer") or self._new_story_started:
+            self._stream_buffer = ""
             self.chatArea.addMessage("", is_user=False, message_type="chat")
             self._new_story_started = False
 
-        self._stream_buffer_chat += text
-        self.chatArea.updateStreamingMessage(self._stream_buffer_chat, message_type="chat")
+        self._stream_buffer += text
+        self.chatArea.updateStreamingMessage(self._stream_buffer, message_type="chat")
 
     def _on_token_story_fixed(self, text: str):
         if not text.strip():
             return
-        if not hasattr(self, "_stream_buffer_fixed") or self._new_story_started:
-            self._stream_buffer_fixed = ""
+        if not hasattr(self, "_stream_buffer") or self._new_story_started:
+            self._stream_buffer = ""
             self.chatArea.addMessage("", is_user=False, message_type="correction")
             self._new_story_started = False
 
-        self._stream_buffer_fixed += text
-        self.chatArea.updateStreamingMessage(self._stream_buffer_fixed, message_type="correction")
+        self._stream_buffer += text
+        self.chatArea.updateStreamingMessage(self._stream_buffer, message_type="correction")
 
     def _on_token_story_continue(self, text: str):
         if not text.strip():
             return
-        if not hasattr(self, "_stream_buffer_story") or self._new_story_started:
-            self._stream_buffer_story = ""
-            self.chatArea.addMessage("", is_user=False, message_type="story")
-            self._new_story_started = False
+        self._stream_buffer = ""
+        self.chatArea.addMessage("", is_user=False, message_type="story")
+        self._new_story_started = False
 
-        self._stream_buffer_story += text
-        self.chatArea.updateStreamingMessage(self._stream_buffer_story, message_type="story")
-
-        # 스토리북 갱신 + 이미지 체크
-        self._append_to_story(self._stream_buffer_story)
-        self.checkImageGeneration()
+        self._stream_buffer += text
+        self.chatArea.updateStreamingMessage(self._stream_buffer, message_type="story")
 
     #
     # def _on_token_chat(self, text: str):

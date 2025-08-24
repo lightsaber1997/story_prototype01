@@ -18,13 +18,12 @@ def get_llm_engine():
         raise ValueError(f"Unknown engine: {engine_type}")
 
 
-def get_chat_controller(result_callback: Callable, token_callback: Optional[Callable] = None):
+def get_chat_controller(result_callback: Callable):
     """Public API: create ChatController with proper engine"""
     engine = get_llm_engine()
     return ChatController(
         engine=engine,
-        result_callback=result_callback,
-        token_callback=token_callback
+        result_callback=result_callback
     )
 
 
