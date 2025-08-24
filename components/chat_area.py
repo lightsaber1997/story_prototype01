@@ -508,7 +508,7 @@ class ChatArea(QFrame):
         bubble.adjustSize()
 
         # message_type 설정
-        bubble.setProperty("message_type", message_type)
+        bubble.message_type = message_type
 
         size = bubble.sizeHint()
         size.setHeight(size.height() + 14)
@@ -533,7 +533,7 @@ class ChatArea(QFrame):
         """입력 텍스트 설정"""
         self.textEdit_childStory.setPlainText(text)
 
-    def updateStreamingMessage(self, text: str, message_type: str):
+    def updateStreamingMessage(self, newText: str, message_type: str):
         """
         스트리밍 메시지 UI 업데이트
         """
@@ -550,11 +550,25 @@ class ChatArea(QFrame):
                 # ✅ 같은 kind면 기존 버블 갱신
                 label = last_widget.findChild(QLabel)
                 if label:
-                    label.setText(text)
+                    label.setText(newText)
+
+                    # ✅ 폭 제한 & 높이 널널하게 재계산
+                    viewport_w = self.chatList.viewport().width() or self.chatList.width()
+                    max_w = int(viewport_w * 0.72)
+                    label.setWordWrap(True)
+                    label.setFixedWidth(max_w)
+
+                    # 레이아웃 다시 계산
+                    last_widget.layout().activate()
                     label.adjustSize()
-                    last_item.setSizeHint(last_widget.sizeHint())
+
+                    # ✅ 널널한 높이 반영
+                    hint = last_widget.sizeHint()
+                    hint.setHeight(hint.height() + 16)  # padding
+                    last_item.setSizeHint(hint)
+
                     self.chatList.scrollToBottom()
                 return
 
         # ✅ kind가 다르거나 버블 없음 → 새 버블 추가
-        self.addMessage(text, is_user=False, message_type=message_type)
+        self.addMessage(newText, is_user=False, message_type=message_type)

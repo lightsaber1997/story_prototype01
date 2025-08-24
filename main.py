@@ -288,35 +288,17 @@ class MainApp(QMainWindow):
     def _on_token_chat(self, text: str):
         if not text.strip():
             return
-        # 첫 토큰일 때만 버블 생성
-        if not hasattr(self, "_stream_buffer") or self._new_story_started:
-            self._stream_buffer = ""
-            self.chatArea.addMessage("", is_user=False, message_type="chat")
-            self._new_story_started = False
-
-        self._stream_buffer += text
-        self.chatArea.updateStreamingMessage(self._stream_buffer, message_type="chat")
+        self.chatArea.updateStreamingMessage(text, message_type="chat")
 
     def _on_token_story_fixed(self, text: str):
         if not text.strip():
             return
-        if not hasattr(self, "_stream_buffer") or self._new_story_started:
-            self._stream_buffer = ""
-            self.chatArea.addMessage("", is_user=False, message_type="correction")
-            self._new_story_started = False
-
-        self._stream_buffer += text
-        self.chatArea.updateStreamingMessage(self._stream_buffer, message_type="correction")
+        self.chatArea.updateStreamingMessage(text, message_type="correction")
 
     def _on_token_story_continue(self, text: str):
         if not text.strip():
             return
-        self._stream_buffer = ""
-        self.chatArea.addMessage("", is_user=False, message_type="story")
-        self._new_story_started = False
-
-        self._stream_buffer += text
-        self.chatArea.updateStreamingMessage(self._stream_buffer, message_type="story")
+        self.chatArea.updateStreamingMessage(text, message_type="story")
 
     #
     # def _on_token_chat(self, text: str):

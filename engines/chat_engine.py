@@ -142,9 +142,21 @@ class ChatWorker(QObject):
                 },
                 {"role": "user", "content": story_context},
             ]
-            story_text = self._stream_and_collect(continue_prompt, "story_continue", 120)
-            if story_text:
-                self.story.append(story_text)
+            raw_story = self._stream_and_collect(continue_prompt, "story_continue", 120)
+            # ✅ UI는 위에서 emit으로 이미 실시간 스트리밍 출력됨
+            # ✅ 내부적으로만 최종 JSON 파싱해서 self.story에 append
+            if raw_story:
+                try:
+                    obj = format_helper.get_first_json(raw_story)
+                    first = obj.get("first", "")
+                    second = obj.get("second", "")
+                    if first:
+                        self.story.append(first)
+                    if second:
+                        self.story.append(second)
+                except Exception as e:
+                    print("JSON parse error in story_continue:", e, raw_story)
+                    self.story.append(raw_story)  # fallback
 
         else:
             # TODO: 일반 답변
@@ -225,21 +237,23 @@ class ChatWorker(QObject):
                 else:
                     # value 종료 탐지 → "
                     if ch == '"':
+                        print(f"[DEBUG] Value end detected (final='{buffer.strip()}')")
+                        # 닫히면 emit 중단 (더 이상 안 보냄)
+                        buffer = ""
+                        inside_value = False
+                    else:
+                        buffer += ch
+                        # 🔥 자라나는 부분을 그대로 emit
                         text = buffer.strip()
                         if text:
-                            print(f"[DEBUG] Value end detected → '{text}' (kind={kind})")
+                            print(f"[DEBUG] Emit growing value='{text}' (kind={kind})")
                             if kind == "chat":
                                 self.token_chat_Ready.emit(text, "chat")
                             elif kind == "story_continue":
                                 self.token_story_continue_Ready.emit(text, "story")
                             elif kind == "fixed_grammar":
                                 self.token_story_fixed_line_Ready.emit(text, "correction")
-                        buffer = ""
-                        inside_value = False
-                    else:
-                        buffer += ch
 
-        # 혹시 끝나기 전에 버퍼 남아 있으면 마지막으로 출력
         if inside_value and buffer.strip():
             text = buffer.strip()
             print(f"[DEBUG] Stream ended with unfinished value → '{text}' (kind={kind})")
@@ -249,8 +263,8 @@ class ChatWorker(QObject):
                 self.token_story_continue_Ready.emit(text, "story")
             elif kind == "fixed_grammar":
                 self.token_story_fixed_line_Ready.emit(text, "correction")
-
         print(f"[DEBUG] _stream_and_collect done (kind={kind}, total_len={len(accumulated)})")
+        print(f"[DEBUG] buffer={buffer}")
         return accumulated
 
     # @Slot(str)
