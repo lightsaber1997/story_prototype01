@@ -178,7 +178,9 @@ class ChatWorker(QObject):
         prev_len = 0
         buffer = ""
         inside_value = False
-        after_colon = False  # 콜론 직후 상태 (공백 허용)
+        after_colon = False
+
+        story_accum = ""  # story_continue일 때 전체 누적 버퍼
 
         print(f"[DEBUG] _stream_and_collect start (kind={kind}, max_new_tokens={max_new_tokens})")
 
@@ -205,46 +207,63 @@ class ChatWorker(QObject):
                             inside_value = True
                             after_colon = False
                             print(f"[DEBUG] Value start detected at pos={prev_len}")
-                            buffer = ""  # value 텍스트만 누적
+                            buffer = ""  # 현재 value 임시 버퍼
                             continue
-                        # 따옴표가 아니면 value 문자열이 아님 → 상태 리셋
                         after_colon = False
-
-                    # 일반 영역 텍스트는 필요하면 유지
-                    # buffer += ch  # (원하면 유지, 보통은 불필요)
-
                 else:
-                    # 문자열 내부 이스케이프 처리: \" 는 종료로 보지 않음
                     is_escaped = len(buffer) > 0 and buffer[-1] == '\\'
                     if ch == '"' and not is_escaped:
-                        print(f"[DEBUG] Value end detected (final='{buffer.strip()}')")
-                        # 한 값 종료 → 상태 리셋, 다음 값 대기 ("," 뒤 또 : " 오면 다시 잡힘)
+                        # ✅ value 종료 시점
+                        final_val = buffer.strip()
+                        print(f"[DEBUG] Value end detected (final='{final_val}')")
+
+                        if kind == "story_continue":
+                            if story_accum:
+                                story_accum += " "
+                            story_accum += final_val
+                            # 종료된 시점에서 전체 누적 emit
+                            self.token_story_continue_Ready.emit(story_accum, "story")
+                        elif kind == "chat":
+                            self.token_chat_Ready.emit(final_val, "chat")
+                        elif kind == "fixed_grammar":
+                            self.token_story_fixed_line_Ready.emit(final_val, "correction")
+
                         buffer = ""
                         inside_value = False
                     else:
                         buffer += ch
-                        text = buffer.strip()
-                        if text:
-                            print(f"[DEBUG] Emit growing value='{text}' (kind={kind})")
-                            if kind == "chat":
+                        if kind == "story_continue":
+                            temp_val = buffer.strip()
+                            if temp_val:
+                                # emit 시 항상 누적 + 현재 buffer
+                                temp_emit = (story_accum + " " + temp_val).strip()
+                                print(f"[DEBUG] Emit growing story='{temp_emit}'")
+                                self.token_story_continue_Ready.emit(temp_emit, "story")
+                        elif kind == "chat":
+                            text = buffer.strip()
+                            if text:
                                 self.token_chat_Ready.emit(text, "chat")
-                            elif kind == "story_continue":
-                                self.token_story_continue_Ready.emit(text, "story")
-                            elif kind == "fixed_grammar":
+                        elif kind == "fixed_grammar":
+                            text = buffer.strip()
+                            if text:
                                 self.token_story_fixed_line_Ready.emit(text, "correction")
 
+        # 스트림이 끝났는데 value가 닫히지 않았을 때
         if inside_value and buffer.strip():
-            text = buffer.strip()
-            print(f"[DEBUG] Stream ended with unfinished value → '{text}' (kind={kind})")
-            if kind == "chat":
-                self.token_chat_Ready.emit(text, "chat")
-            elif kind == "story_continue":
-                self.token_story_continue_Ready.emit(text, "story")
+            final_val = buffer.strip()
+            print(f"[DEBUG] Stream ended with unfinished value → '{final_val}' (kind={kind})")
+            if kind == "story_continue":
+                if story_accum:
+                    story_accum += " "
+                story_accum += final_val
+                self.token_story_continue_Ready.emit(story_accum, "story")
+            elif kind == "chat":
+                self.token_chat_Ready.emit(final_val, "chat")
             elif kind == "fixed_grammar":
-                self.token_story_fixed_line_Ready.emit(text, "correction")
+                self.token_story_fixed_line_Ready.emit(final_val, "correction")
 
         print(f"[DEBUG] _stream_and_collect done (kind={kind}, total_len={len(accumulated)})")
-        print(f"[DEBUG] buffer={buffer}")
+        print(f"[DEBUG] story_accum={story_accum}")
         return accumulated
 
     # def _stream_and_collect(self, prompt, kind, max_new_tokens):
