@@ -1,2 +1,11 @@
 llm:
-  engine: "gpt"       # "phi3" 또는 다른 모델
+  engine: "gpt"       # "phi3", "gpt", "server"
+
+  # 서버 설정
+  server:
+    url: "http://localhost:8080"
+    endpoint: "/generate"
+
+  # 스트림 설정
+  chat_response_streaming:
+    enabled: true
