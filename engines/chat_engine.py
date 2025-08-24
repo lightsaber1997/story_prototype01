@@ -27,17 +27,24 @@ class ChatWorker(QObject):
         self.engine = engine
         self.story: List[str] = []
 
-    def _classify_with_stream(self, classify_prompt, max_new_tokens=8) -> bool:
-        """Streaming으로 true/false 분류"""
-        buffer = ""
-        for token in self.engine.generate_reply_stream(classify_prompt, max_new_tokens=max_new_tokens):
-            buffer += token.strip().lower()
-            # 조기 판정
-            if "true" in buffer:
-                return True
-            if "false" in buffer:
-                return False
-        # fallback
+    @staticmethod
+    def is_json_complete(s: str) -> bool:
+        """중괄호 개수로 JSON 완성 여부 추적"""
+        depth = 0
+        in_string = False
+        escape = False
+        for ch in s:
+            if ch == '"' and not escape:  # 문자열 안은 무시
+                in_string = not in_string
+            if in_string:
+                escape = (ch == '\\' and not escape)
+                continue
+            if ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:  # 루트 객체가 닫힘
+                    return True
         return False
 
     @Slot(str)
@@ -47,20 +54,40 @@ class ChatWorker(QObject):
                 "role": "system",
                 "content": textwrap.dedent("""
                     You are an assistant in a children's story-builder app.
-                    Answer ONLY with "true" if the user's message is a STORY SENTENCE,
-                    or "false" if it is a QUESTION/CHAT. No extra words.
+                    Answer ONLY with {"is_story":"true"} if the user's message is a STORY SENTENCE,
+                    or {"is_story":"false"} if it is a QUESTION/CHAT. No extra words.
                 """).strip(),
             },
             {"role": "user", "content": user_text},
         ]
 
-        is_story = self._classify_with_stream(classify_prompt)
+        # Streaming으로 true/false 분류
+        buffer = ""
+        for token in self.engine.generate_reply_stream(classify_prompt, max_new_tokens=8):
+            buffer += token
+            if self.is_json_complete(buffer):
+                obj = format_helper.get_first_json(buffer)
+                is_story = bool(obj.get("is_story", False))
+                break
 
         if is_story:
-            fixed_line = self._nl2space(user_text)  # 여기선 바로 user_text 쓰거나 최소 보정
+            # TODO: fixed_line 구하기
+            fix_prompt = [
+                {
+                    "role": "system",
+                    "content": textwrap.dedent("""
+                        Correct the grammar/spelling of the following sentence minimally
+                        but keep the child's voice.
+                        Respond with EXACTLY ONE JSON object:
+                        {"fixed_line":"..."}
+                    """).strip(),
+                },
+                {"role": "user", "content": user_text},
+            ]
+            fixed_line = self._stream_and_collect(fix_prompt, "fixed_grammar", 120)
             self.story.append(fixed_line)
-            self.resultReady.emit({"type": "story_line_complete", "text": fixed_line})
 
+            # TODO: 이야기 만들기
             story_context = " ".join(self.story[-100:])
             continue_prompt = [
                 {
@@ -75,17 +102,30 @@ class ChatWorker(QObject):
                 },
                 {"role": "user", "content": story_context},
             ]
-            self._stream_and_collect(continue_prompt, "story_continue", 120)
+            story_continue = self._stream_and_collect(continue_prompt, "story_continue", 120)
+            self.story.append(story_continue)
 
         else:
-            chat_prompt = [{"role": "user", "content": user_text}]
+            # TODO: 일반 답변
+            chat_prompt = [
+                {
+                    "role": "system",
+                    "content": textwrap.dedent("""
+                        You are a helpful assistant for casual chat.
+                        Respond with EXACTLY ONE JSON object:
+                        {"answer":"..."}
+                    """).strip(),
+                },
+                {"role": "user", "content": user_text}
+            ]
             self._stream_and_collect(chat_prompt, "chat", 120)
+
 
     def _stream_and_collect(self, prompt, kind, max_new_tokens):
         accumulated = ""
         for token in self.engine.generate_reply_stream(prompt, max_new_tokens=max_new_tokens):
             accumulated += token
-            if kind == "story_fixed":
+            if kind == "fixed_grammar":
                 self.token_story_fixed_line_Ready.emit(token)
             elif kind == "story_continue":
                 self.token_story_continue_Ready.emit(token)
@@ -93,8 +133,8 @@ class ChatWorker(QObject):
                 self.token_chat_Ready.emit(token)
 
         clean = self._nl2space(accumulated)
-        # dict 형태로 emit해야 MainApp에서 payload["type"], payload["text"]로 안전하게 받음
         self.resultReady.emit({"type": kind, "text": clean})
+        return accumulated
 
     #
     # @Slot(str)
