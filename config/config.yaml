@@ -1,10 +1,14 @@
 llm:
-  engine: "gpt"       # "phi3", "gpt", "server"
+  engine: "server"       # "phi3", "gpt", "server"
 
   # 서버 설정
   server:
     url: "http://localhost:8080"
     endpoint: "/generate"
+    timeout_sec: 300
+    payload_mode: "both"   # "messages" | "prompt" | "both"
+    temperature: 0.7
+    top_p: 1.0
 
   # 스트림 설정
   chat_response_streaming:
