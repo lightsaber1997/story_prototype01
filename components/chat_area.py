@@ -547,12 +547,11 @@ class ChatArea(QFrame):
             last_type = getattr(last_widget, "message_type", None)
 
             if last_type == message_type:
-                # ✅ 같은 kind면 기존 버블 갱신
                 label = last_widget.findChild(QLabel)
                 if label:
                     label.setText(newText)
 
-                    # ✅ 폭 제한 & 높이 널널하게 재계산
+                    # 폭 제한 & 높이 널널하게 재계산
                     viewport_w = self.chatList.viewport().width() or self.chatList.width()
                     max_w = int(viewport_w * 0.72)
                     label.setWordWrap(True)
@@ -562,7 +561,7 @@ class ChatArea(QFrame):
                     last_widget.layout().activate()
                     label.adjustSize()
 
-                    # ✅ 널널한 높이 반영
+                    # 널널한 높이 반영
                     hint = last_widget.sizeHint()
                     hint.setHeight(hint.height() + 16)  # padding
                     last_item.setSizeHint(hint)
@@ -570,5 +569,5 @@ class ChatArea(QFrame):
                     self.chatList.scrollToBottom()
                 return
 
-        # ✅ kind가 다르거나 버블 없음 → 새 버블 추가
+        # kind가 다르거나 버블 없음 → 새 버블 추가
         self.addMessage(newText, is_user=False, message_type=message_type)

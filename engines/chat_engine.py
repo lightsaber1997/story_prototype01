@@ -137,7 +137,7 @@ class ChatWorker(QObject):
                         Make sure the reply forms a complete sentence and ends with a period.
                         Respond with EXACTLY ONE JSON object, on a single line, no code block
                         markers, no extra text. 
-                        {"first": "first sentence", "second": "second sentence"}
+                        {"first":"first sentence", "second":"second sentence"}
                     """).strip(),
                 },
                 {"role": "user", "content": story_context},
@@ -172,6 +172,80 @@ class ChatWorker(QObject):
                 {"role": "user", "content": user_text}
             ]
             self._stream_and_collect(chat_prompt, "chat", 120)
+
+    def _stream_and_collect(self, prompt, kind, max_new_tokens):
+        accumulated = ""
+        prev_len = 0
+        buffer = ""
+        inside_value = False
+        after_colon = False  # 콜론 직후 상태 (공백 허용)
+
+        print(f"[DEBUG] _stream_and_collect start (kind={kind}, max_new_tokens={max_new_tokens})")
+
+        for token in self.engine.generate_reply_stream(prompt, max_new_tokens=max_new_tokens):
+            accumulated += token
+            delta = accumulated[prev_len:]
+            prev_len = len(accumulated)
+            if not delta:
+                continue
+
+            for ch in delta:
+                if not inside_value:
+                    # 콜론 본 직후: 공백은 스킵, 첫 비공백이 따옴표면 value 시작
+                    if ch == ':':
+                        after_colon = True
+                        # 콜론 자체는 파싱 상태에만 쓰고 buffer에는 굳이 쌓지 않음
+                        continue
+
+                    if after_colon:
+                        if ch.isspace():
+                            # : 뒤 공백 허용
+                            continue
+                        if ch == '"':
+                            inside_value = True
+                            after_colon = False
+                            print(f"[DEBUG] Value start detected at pos={prev_len}")
+                            buffer = ""  # value 텍스트만 누적
+                            continue
+                        # 따옴표가 아니면 value 문자열이 아님 → 상태 리셋
+                        after_colon = False
+
+                    # 일반 영역 텍스트는 필요하면 유지
+                    # buffer += ch  # (원하면 유지, 보통은 불필요)
+
+                else:
+                    # 문자열 내부 이스케이프 처리: \" 는 종료로 보지 않음
+                    is_escaped = len(buffer) > 0 and buffer[-1] == '\\'
+                    if ch == '"' and not is_escaped:
+                        print(f"[DEBUG] Value end detected (final='{buffer.strip()}')")
+                        # 한 값 종료 → 상태 리셋, 다음 값 대기 ("," 뒤 또 : " 오면 다시 잡힘)
+                        buffer = ""
+                        inside_value = False
+                    else:
+                        buffer += ch
+                        text = buffer.strip()
+                        if text:
+                            print(f"[DEBUG] Emit growing value='{text}' (kind={kind})")
+                            if kind == "chat":
+                                self.token_chat_Ready.emit(text, "chat")
+                            elif kind == "story_continue":
+                                self.token_story_continue_Ready.emit(text, "story")
+                            elif kind == "fixed_grammar":
+                                self.token_story_fixed_line_Ready.emit(text, "correction")
+
+        if inside_value and buffer.strip():
+            text = buffer.strip()
+            print(f"[DEBUG] Stream ended with unfinished value → '{text}' (kind={kind})")
+            if kind == "chat":
+                self.token_chat_Ready.emit(text, "chat")
+            elif kind == "story_continue":
+                self.token_story_continue_Ready.emit(text, "story")
+            elif kind == "fixed_grammar":
+                self.token_story_fixed_line_Ready.emit(text, "correction")
+
+        print(f"[DEBUG] _stream_and_collect done (kind={kind}, total_len={len(accumulated)})")
+        print(f"[DEBUG] buffer={buffer}")
+        return accumulated
 
     # def _stream_and_collect(self, prompt, kind, max_new_tokens):
     #     buffer = ""
@@ -208,64 +282,64 @@ class ChatWorker(QObject):
     #
     #     # fallback: 끝까지 가도 JSON 못 찾음
     #     return buffer.strip()
-    import re
-    def _stream_and_collect(self, prompt, kind, max_new_tokens):
-        accumulated = ""
-        prev_len = 0
-        buffer = ""
-        inside_value = False
 
-        print(f"[DEBUG] _stream_and_collect start (kind={kind}, max_new_tokens={max_new_tokens})")
-
-        for token in self.engine.generate_reply_stream(prompt, max_new_tokens=max_new_tokens):
-            accumulated += token
-            delta = accumulated[prev_len:]
-            prev_len = len(accumulated)
-
-            if not delta:
-                continue
-
-            for ch in delta:
-                if not inside_value:
-                    # value 시작 탐지 → :"
-                    if buffer.endswith(':') and ch == '"':
-                        inside_value = True
-                        print(f"[DEBUG] Value start detected at pos={prev_len}")
-                        buffer = ""  # value 누적 버퍼 리셋
-                    else:
-                        buffer += ch
-                else:
-                    # value 종료 탐지 → "
-                    if ch == '"':
-                        print(f"[DEBUG] Value end detected (final='{buffer.strip()}')")
-                        # 닫히면 emit 중단 (더 이상 안 보냄)
-                        buffer = ""
-                        inside_value = False
-                    else:
-                        buffer += ch
-                        # 🔥 자라나는 부분을 그대로 emit
-                        text = buffer.strip()
-                        if text:
-                            print(f"[DEBUG] Emit growing value='{text}' (kind={kind})")
-                            if kind == "chat":
-                                self.token_chat_Ready.emit(text, "chat")
-                            elif kind == "story_continue":
-                                self.token_story_continue_Ready.emit(text, "story")
-                            elif kind == "fixed_grammar":
-                                self.token_story_fixed_line_Ready.emit(text, "correction")
-
-        if inside_value and buffer.strip():
-            text = buffer.strip()
-            print(f"[DEBUG] Stream ended with unfinished value → '{text}' (kind={kind})")
-            if kind == "chat":
-                self.token_chat_Ready.emit(text, "chat")
-            elif kind == "story_continue":
-                self.token_story_continue_Ready.emit(text, "story")
-            elif kind == "fixed_grammar":
-                self.token_story_fixed_line_Ready.emit(text, "correction")
-        print(f"[DEBUG] _stream_and_collect done (kind={kind}, total_len={len(accumulated)})")
-        print(f"[DEBUG] buffer={buffer}")
-        return accumulated
+    # def _stream_and_collect(self, prompt, kind, max_new_tokens):
+    #     accumulated = ""
+    #     prev_len = 0
+    #     buffer = ""
+    #     inside_value = False
+    #
+    #     print(f"[DEBUG] _stream_and_collect start (kind={kind}, max_new_tokens={max_new_tokens})")
+    #
+    #     for token in self.engine.generate_reply_stream(prompt, max_new_tokens=max_new_tokens):
+    #         accumulated += token
+    #         delta = accumulated[prev_len:]
+    #         prev_len = len(accumulated)
+    #
+    #         if not delta:
+    #             continue
+    #
+    #         for ch in delta:
+    #             if not inside_value:
+    #                 # value 시작 탐지 → :"
+    #                 if buffer.endswith(':') and ch == '"':
+    #                     inside_value = True
+    #                     print(f"[DEBUG] Value start detected at pos={prev_len}")
+    #                     buffer = ""  # value 누적 버퍼 리셋
+    #                 else:
+    #                     buffer += ch
+    #             else:
+    #                 # value 종료 탐지 → "
+    #                 if ch == '"':
+    #                     print(f"[DEBUG] Value end detected (final='{buffer.strip()}')")
+    #                     # 닫히면 emit 중단 (더 이상 안 보냄)
+    #                     buffer = ""
+    #                     inside_value = False
+    #                 else:
+    #                     buffer += ch
+    #                     # 🔥 자라나는 부분을 그대로 emit
+    #                     text = buffer.strip()
+    #                     if text:
+    #                         print(f"[DEBUG] Emit growing value='{text}' (kind={kind})")
+    #                         if kind == "chat":
+    #                             self.token_chat_Ready.emit(text, "chat")
+    #                         elif kind == "story_continue":
+    #                             self.token_story_continue_Ready.emit(text, "story")
+    #                         elif kind == "fixed_grammar":
+    #                             self.token_story_fixed_line_Ready.emit(text, "correction")
+    #
+    #     if inside_value and buffer.strip():
+    #         text = buffer.strip()
+    #         print(f"[DEBUG] Stream ended with unfinished value → '{text}' (kind={kind})")
+    #         if kind == "chat":
+    #             self.token_chat_Ready.emit(text, "chat")
+    #         elif kind == "story_continue":
+    #             self.token_story_continue_Ready.emit(text, "story")
+    #         elif kind == "fixed_grammar":
+    #             self.token_story_fixed_line_Ready.emit(text, "correction")
+    #     print(f"[DEBUG] _stream_and_collect done (kind={kind}, total_len={len(accumulated)})")
+    #     print(f"[DEBUG] buffer={buffer}")
+    #     return accumulated
 
     # @Slot(str)
     # def doWork(self, user_input: str):
