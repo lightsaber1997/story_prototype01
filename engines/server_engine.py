@@ -187,16 +187,41 @@ class ServerEngine(BaseEngine):
         except Exception as e:
             return f"[ServerEngine error] {str(e)}"
 
-    def generate_reply_stream(self, messages: List[Dict[str, str]], *, max_new_tokens: int = 128):
+    def generate_reply_stream(
+        self,
+        messages: List[Dict[str, str]],
+        *,
+        max_new_tokens: int = 128,
+        chunk_size: int = 1024,
+    ) -> Generator[str, None, None]:
+        """
+        Stream plain text response from the server.
+
+        Yields decoded text chunks. On error, logs and exits cleanly.
+        """
         url = f"{self.server_url.rstrip('/')}/{self.endpoint_stream.lstrip('/')}"
         payload = self._compose_payload(messages, max_new_tokens, stream=True)
-        print(f"payload={payload}")
+        print(f"[ServerEngine] Streaming request to {url}")
+        print(f"[ServerEngine] payload={json.dumps(payload, ensure_ascii=False)[:500]}...")
+
         try:
-            with requests.post(url, headers=self.headers, json=payload, timeout=self.timeout, stream=True) as resp:
+            with requests.post(
+                url,
+                headers=self.headers,
+                json=payload,
+                timeout=self.timeout,
+                stream=True,
+            ) as resp:
                 resp.raise_for_status()
-                for line in self._iter_stream_lines(resp):
-                    delta = self._extract_delta(line)
-                    if delta:
-                        yield delta
+
+                for chunk in resp.iter_content(chunk_size=chunk_size, decode_unicode=True):
+                    if not chunk:
+                        continue
+                    yield chunk
+
+        except requests.exceptions.Timeout:
+            print("[ServerEngine ERROR] Request timed out")
+        except requests.exceptions.RequestException as e:
+            print(f"[ServerEngine ERROR] Network/HTTP error: {e}")
         except Exception as e:
-            yield f"[ServerEngine error] {str(e)}"
+            print(f"[ServerEngine ERROR] Unexpected: {e}")
