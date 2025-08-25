@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QColor, QPainter, QPen, QBrush
 
-class ChatMessageDelegate(QStyledItemDelegate):    
+class ChatMessageDelegate(QStyledItemDelegate): 
     def paint(self, painter, option, index):
         from PySide6.QtGui import QFont, QFontMetrics
         from PySide6.QtCore import QRect
@@ -466,14 +466,13 @@ class ChatArea(QFrame):
         """텍스트 변경 시 Enter 키 처리"""
         # Ctrl+Enter로 메시지 전송하도록 설정할 수 있음
         pass
-    
+
     def sendMessage(self):
-        """메시지 전송"""
         text = self.textEdit_childStory.toPlainText().strip()
         if text:
             self.messageSent.emit(text)
             self.textEdit_childStory.clear()
-    
+
     # def addMessage(self, text: str, is_user: bool = False, message_type: str = "normal"):
     #     """채팅 메시지 추가"""
     #     item = QListWidgetItem()
@@ -508,6 +507,9 @@ class ChatArea(QFrame):
         bubble.layout().activate()
         bubble.adjustSize()
 
+        # message_type 설정
+        bubble.message_type = message_type
+
         size = bubble.sizeHint()
         size.setHeight(size.height() + 14)
 
@@ -518,7 +520,6 @@ class ChatArea(QFrame):
         self.chatList.addItem(item)
         self.chatList.setItemWidget(item, bubble)
         self.chatList.scrollToBottom()
-
     
     def clearChat(self):
         """채팅 내용 지우기"""
@@ -531,3 +532,42 @@ class ChatArea(QFrame):
     def setInputText(self, text: str):
         """입력 텍스트 설정"""
         self.textEdit_childStory.setPlainText(text)
+
+    def updateStreamingMessage(self, newText: str, message_type: str):
+        """
+        스트리밍 메시지 UI 업데이트
+        """
+        # 마지막 버블 확인
+        count = self.chatList.count()
+        if count > 0:
+            last_item = self.chatList.item(count - 1)
+            last_widget = self.chatList.itemWidget(last_item)
+
+            # 마지막 버블의 타입을 가져오기
+            last_type = getattr(last_widget, "message_type", None)
+
+            if last_type == message_type:
+                label = last_widget.findChild(QLabel)
+                if label:
+                    label.setText(newText)
+
+                    # 폭 제한 & 높이 널널하게 재계산
+                    viewport_w = self.chatList.viewport().width() or self.chatList.width()
+                    max_w = int(viewport_w * 0.72)
+                    label.setWordWrap(True)
+                    label.setFixedWidth(max_w)
+
+                    # 레이아웃 다시 계산
+                    last_widget.layout().activate()
+                    label.adjustSize()
+
+                    # 널널한 높이 반영
+                    hint = last_widget.sizeHint()
+                    hint.setHeight(hint.height() + 16)  # padding
+                    last_item.setSizeHint(hint)
+
+                    self.chatList.scrollToBottom()
+                return
+
+        # kind가 다르거나 버블 없음 → 새 버블 추가
+        self.addMessage(newText, is_user=False, message_type=message_type)
