@@ -21,7 +21,7 @@ import format_helper
 from engines.stable_engine import StableV15Engine
 from engines.q_stable_engine import QStableV21Engine
 from engines.image_gen_engine import *
-
+from engines.img_to_text_engine import *
 
 class HomeWindow(QMainWindow):
     def __init__(self):
@@ -131,16 +131,23 @@ class MainApp(QMainWindow):
 
             # 이미지 생성 엔진
             self.image_gen_engine = QStableV21Engine(
-            text_encoder=text_encoder_path,
-            vae_decoder=vae_decoder_path,
-            unet=unet_path,
-            scheduler="ddim",
-            channel_last_latent=True
-        )
+                text_encoder=text_encoder_path,
+                vae_decoder=vae_decoder_path,
+                unet=unet_path,
+                scheduler="ddim",
+                channel_last_latent=True
+            )
             
             self.image_gen_controller = ImageGenController(
                 self._on_image_gen_ready,
-                self.image_gen_engine)
+                self.image_gen_engine
+            )
+
+            self.img_to_text_engine = DummyImgToTextEngine()
+            self.img_to_text_controller = ImgToTextController(
+                self.img_to_text_engine,
+                self._on_img_to_text_ready
+            )
 
             print("AI 엔진 초기화 완료")
         except Exception as e:
@@ -244,22 +251,35 @@ class MainApp(QMainWindow):
         """스토리 저장 처리"""
         QMessageBox.information(self, "저장 완료", "스토리북이 성공적으로 저장되었습니다!")
 
-    def handleImageInput(self, file_path: str):
-        """이미지 업로드 입력 처리 (OCR 목업)"""
-        # TODO: 나중에 AI 붙이면 여기서 호출
-        # ai.convert_text(file_path)
-        # 사용자 채팅창에 표시하지 않음
-        image_ocr_text = f"Once upon a time, there was a converted text from {os.path.basename(file_path)}"
+    # def handleImageInput(self, file_path: str):
+    #     """이미지 업로드 입력 처리 (OCR 목업)"""
+    #     # TODO: 나중에 AI 붙이면 여기서 호출
+    #     # ai.convert_text(file_path)
+    #     # 사용자 채팅창에 표시하지 않음
+    #     image_ocr_text = f"Once upon a time, there was a converted text from {os.path.basename(file_path)}"
 
-        # 실제 AI 호출처럼 operate 이벤트 발생
+    #     # 실제 AI 호출처럼 operate 이벤트 발생
 
-        if hasattr(self, 'chat_controller'):
-            # OCR 입력임을 알려주는 메타 정보 포함
-            self.chat_controller.operate.emit(json.dumps({
-                "source": "ocr",
-                "text": image_ocr_text
-            }))
+    #     if hasattr(self, 'chat_controller'):
+    #         # OCR 입력임을 알려주는 메타 정보 포함
+    #         self.chat_controller.operate.emit(json.dumps({
+    #             "source": "ocr",
+    #             "text": image_ocr_text
+    #         }))
 
+    def _on_img2text_ready(self, payload: dict):
+        if payload["type"] == "img2text":
+            text = payload["text"]
+            print(f"[Img2Text] {text}")
+
+            # Feed OCR result into chat controller as if user typed it
+            if hasattr(self, 'chat_controller'):
+                self.chat_controller.operate.emit(text)
+
+        elif payload["type"] == "error":
+            QMessageBox.critical(self, "이미지 인식 오류", f"OCR 실패: {payload['error']}")
+
+            
     def _on_chat_reply(self, payload: Dict[str, str]) -> None:
         kind = payload.get("type")
         text = payload.get("text", "")
