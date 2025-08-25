@@ -67,26 +67,21 @@ class ChatWorker(QObject):
         ]
 
 
-        # determin whether user input is story or not
         is_story = False
         try:
-            self.engine.generate_reply(
-                classify_prompt
-            )
-            
-        except:
-            print("is_story response error")
+            generated = self.engine.generate_reply(classify_prompt)
+            print("[DEBUG] is_story generated={generated}")
+            # Parse JSON string to Python dict
+            result = json.loads(generated.strip())
+
+            if result.get("is_story") == "true":
+                is_story = True
+
+        except Exception as e:
+            print("is_story response error:", e)
 
 
-        is_story = False
-        buffer = ""
-        for token in self.engine.generate_reply_stream(classify_prompt, max_new_tokens=8):
-            buffer += token
-            if self.is_json_complete(buffer):
-                obj = format_helper.get_first_json(buffer)
-                is_story_val = obj.get("is_story", False)
-                is_story = str(is_story_val).lower() == "true"
-                break
+        
 
         if is_story:
             # fixed_line 구하기
