@@ -123,10 +123,11 @@ class MainApp(QMainWindow):
             self.chat_controller.worker.token_correction_Ready.connect(self._on_token_story_fixed)
             self.chat_controller.worker.token_story_continue_Ready.connect(self._on_token_story_continue)
 
+            base_dir = os.path.dirname(__file__)  # 또는 os.getcwd() 가능
 
-            text_encoder_path = r"C:\DYS\merge_SD\story_prototype01\data\models\text_encoder.onnx\model.onnx"
-            vae_decoder_path = r"C:\DYS\merge_SD\story_prototype01\data\models\vae_decoder.onnx\model.onnx"
-            unet_path = r"C:\DYS\merge_SD\story_prototype01\data\models\unet.onnx\model.onnx"
+            text_encoder_path = os.path.join(base_dir, "data", "models", "text_encoder.onnx", "model.onnx")
+            vae_decoder_path = os.path.join(base_dir, "data", "models", "vae_decoder.onnx", "model.onnx")
+            unet_path = os.path.join(base_dir, "data", "models", "unet.onnx", "model.onnx")
 
             # 이미지 생성 엔진
             self.image_gen_engine = QStableV21Engine(
@@ -266,11 +267,11 @@ class MainApp(QMainWindow):
 
         if kind == "story_answer":
             self._append_to_story(text.strip())
-            self.checkImageGeneration()
 
         elif kind == "correction_answer":
             # grammar correction 완성본도 storybook 교체
             self._append_to_story(text.strip())
+            self.checkImageGeneration()
         return
 
     def _on_token_chat(self, text: str):
@@ -353,7 +354,7 @@ class MainApp(QMainWindow):
             return False  # 기존 페이지에 추가
 
     def checkImageGeneration(self):
-        """이미지 생성 조건 확인"""
+        """이미지 생성 조건 확인 (correction일 때 진행)"""
         if not self.story_pages_list:
             return
         # 페이지별 진행 상태 확인
@@ -368,6 +369,7 @@ class MainApp(QMainWindow):
 
         segments = self.story_pages_list[self.current_page_idx]
         select_idx = 1
+        print("[checkImageGeneration 시작]")
 
         if segments is not None and (len(segments) == select_idx + 1):
             prompt_for_image = segments[select_idx]
