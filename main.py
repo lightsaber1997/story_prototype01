@@ -374,9 +374,9 @@ class MainApp(QMainWindow):
         if segments is not None and (len(segments) == select_idx + 1):
             prompt_for_image = segments[select_idx]
             prompt_for_image = format_helper.first_sentence(prompt_for_image)
-            #prompt_for_image += " children's picture book"
+            prompt_for_image += " children's picture book"
             # DEBUG
-            prompt_for_image = "A magical dragon, children’s storybook style"
+            #prompt_for_image = "A magical dragon, children’s storybook style"
             print(f"이미지 생성 프롬프트: {prompt_for_image}")
             self._image_gen_in_progress.add(self.current_page_idx)
 
