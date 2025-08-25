@@ -17,7 +17,7 @@ class ChatWorker(QObject):
 
     resultReady = Signal(dict)
     token_chat_Ready = Signal(str, str)
-    token_correction_Ready = Signal(str, str)
+    correction_ready = Signal(dict)
     token_story_continue_Ready = Signal(str, str)
 
     def __init__(self, engine):
@@ -56,12 +56,14 @@ class ChatWorker(QObject):
 
         classify_prompt = [
             {
-                "role": "system",
-                "content": textwrap.dedent("""
-                    You are an assistant in a children's story-builder app.
-                    Answer ONLY with {"is_story":"true"} if the user's message is a STORY SENTENCE,
-                    or {"is_story":"false"} if it is a QUESTION/CHAT. No extra words.
-                """).strip(),
+            "role": "system",
+            "content": textwrap.dedent("""
+                You are an assistant in a children's story app.
+                Reply with exactly one JSON object only:
+                {"is_story":"true"} if the input is part of a story
+                {"is_story":"false"} if it is a question or chat
+                Always use double quotes for both key and value. No other text.
+            """).strip(),
             },
             {"role": "user", "content": user_text},
         ]
@@ -70,9 +72,9 @@ class ChatWorker(QObject):
         is_story = False
         try:
             generated = self.engine.generate_reply(classify_prompt)
-            print("[DEBUG] is_story generated={generated}")
-            # Parse JSON string to Python dict
-            result = json.loads(generated.strip())
+            print(f"[DEBUG] is_story generated={generated}")
+            # Use robust fixer instead of raw json.loads
+            result = format_helper.single_key_bool_json_fix(generated, field="is_story")
 
             if result.get("is_story") == "true":
                 is_story = True
@@ -82,7 +84,9 @@ class ChatWorker(QObject):
 
 
         
-
+        ####################################
+        ### part 2
+        ####################################
         if is_story:
             # fixed_line 구하기
             print("[AI] is_story: True -> result: correction, story_continue")
@@ -90,23 +94,29 @@ class ChatWorker(QObject):
                 {
                     "role": "system",
                     "content": textwrap.dedent("""
-                        Correct the grammar/spelling of the following sentence minimally
+                        Correct the grammar/spelling of the following sentence minimally,
                         but keep the child's voice.
-                        Respond with EXACTLY ONE JSON object:
-                        {"fixed_line":"..."}
+                        Respond with ONLY the corrected sentence, nothing else.
                     """).strip(),
                 },
                 {"role": "user", "content": user_text},
             ]
-            fixed_raw = self._stream_and_collect(fix_prompt, "correction", 120)
-            try:
-                obj = format_helper.get_first_json(fixed_raw)
-                fixed_line = obj.get("fixed_line", user_text)
-            except Exception as e:
-                print("JSON parse error in fix:", e, fixed_raw)
-                fixed_line = user_text
 
+            try:
+                fixed_generated = self.engine.generate_reply(fix_prompt)
+                print(f"[DEBUG] is_story generated={generated}")
+                # Parse JSON string to Python dict
+                fixed_line = fixed_generated
+
+            except Exception as e:
+                print("JSON parse error in fix:", e, fixed_generated)
+                fixed_line = user_text
+            
             self.story.append(fixed_line)
+
+            self.correction_ready.emit(self.correction_ready.emit({"type": "correction", "text": fixed_line}))
+         
+            
 
             # 이야기 만들기
             story_context = " ".join(self.story[-100:])

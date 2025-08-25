@@ -77,3 +77,45 @@ def first_sentence(text: str, *, eos: Sequence[str] = (".", "?", "!")) -> str:
     match = re.search(pattern, text.strip(), re.DOTALL)
 
     return match.group(1).strip() if match else text.strip()
+
+
+import re, json
+
+def single_key_bool_json_fix(text: str, field: str = "is_story") -> dict:
+    """
+    Extract and normalize JSON from model output.
+    Ensures keys are quoted and values for the target field are always strings ("true"/"false").
+    For correct input {"is_story":"true"}, this function manages to handle wrong
+    jsons such as
+    {is_story:"true"}, {is_story:"true"} 
+    
+    """
+    try:
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if not match:
+            return {}
+        candidate = match.group(0)
+
+        # 1. Ensure keys are quoted: {field:...} → {"field":...}
+        candidate = re.sub(r'([{,]\s*)([a-zA-Z0-9_]+)\s*:', r'\1"\2":', candidate)
+
+        # 2. Normalize boolean-ish values for the target field into quoted strings
+        #    {"field":true} → {"field":"true"}
+        #    {"field":false} → {"field":"false"}
+        candidate = re.sub(
+            rf'"{field}"\s*:\s*true',
+            f'"{field}":"true"',
+            candidate,
+            flags=re.IGNORECASE
+        )
+        candidate = re.sub(
+            rf'"{field}"\s*:\s*false',
+            f'"{field}":"false"',
+            candidate,
+            flags=re.IGNORECASE
+        )
+
+        return json.loads(candidate)
+    except Exception as e:
+        print(f"extract_json error for {field}:", e, text)
+        return {}

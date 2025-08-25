@@ -120,7 +120,7 @@ class MainApp(QMainWindow):
 
             # 시그널 연결
             self.chat_controller.worker.token_chat_Ready.connect(self._on_token_chat)
-            self.chat_controller.worker.token_correction_Ready.connect(self._on_token_story_fixed)
+            self.chat_controller.worker.correction_ready.connect(self._on_correction_ready)
             self.chat_controller.worker.token_story_continue_Ready.connect(self._on_token_story_continue)
 
             base_dir = os.path.dirname(__file__)  # 또는 os.getcwd() 가능
@@ -297,10 +297,16 @@ class MainApp(QMainWindow):
             return
         self.chatArea.updateStreamingMessage(text, message_type="chat")
 
-    def _on_token_story_fixed(self, text: str):
+    def _on_correction_ready(self, payload: dict):
+        text = payload.get("text", "")
         if not text.strip():
             return
-        self.chatArea.updateStreamingMessage(f"Grammar Correction: {text}", message_type="correction")
+        # add a full message instead of streaming
+        self.chatArea.addMessage(f"Grammar Correction: {text}", is_user=False)
+        self._append_to_story(text.strip())
+        self.checkImageGeneration()
+
+
 
     def _on_token_story_continue(self, text: str):
         if not text.strip():
