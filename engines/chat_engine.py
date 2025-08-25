@@ -48,37 +48,37 @@ class ChatWorker(QObject):
 
     @Slot(str)
     def doWork(self, user_text: str):
-        if self.is_image is True:
-            # 이야기 생성
-            print("[AI] First Story - Generate By Image")
-            story_context = " ".join(self.story[-100:])
-            continue_prompt = [
-                {
-                    "role": "system",
-                    "content": textwrap.dedent("""
-                        Continue this children's story in 2 lively sentences. 
-                        Make sure the reply forms a complete sentence and ends with a period.
-                        Respond with EXACTLY ONE JSON object, on a single line, no code block
-                        markers, no extra text. 
-                        {"first": "first sentence", "second": "second sentence"}
-                    """).strip(),
-                },
-                {"role": "user", "content": story_context},
-            ]
-            story_text = self._stream_and_collect(continue_prompt, "story_continue", 120)
-            try:
-                obj = format_helper.get_first_json(story_text)
-                first = obj.get("first", "").strip()
-                second = obj.get("second", "").strip()
-                if first:
-                    self.story.append(first)
-                if second:
-                    self.story.append(second)
-            except Exception as e:
-                print("JSON parse error in continue:", e, story_text)
-                self.story.append(story_text.strip())  # fallback
-            self.is_image = False
-            return
+        # if self.is_image is True:
+        #     # 이야기 생성
+        #     print("[AI] First Story - Generate By Image")
+        #     story_context = " ".join(self.story[-100:])
+        #     continue_prompt = [
+        #         {
+        #             "role": "system",
+        #             "content": textwrap.dedent("""
+        #                 Continue this children's story in 2 lively sentences. 
+        #                 Make sure the reply forms a complete sentence and ends with a period.
+        #                 Respond with EXACTLY ONE JSON object, on a single line, no code block
+        #                 markers, no extra text. 
+        #                 {"first": "first sentence", "second": "second sentence"}
+        #             """).strip(),
+        #         },
+        #         {"role": "user", "content": story_context},
+        #     ]
+        #     story_text = self._stream_and_collect(continue_prompt, "story_continue", 120)
+        #     try:
+        #         obj = format_helper.get_first_json(story_text)
+        #         first = obj.get("first", "").strip()
+        #         second = obj.get("second", "").strip()
+        #         if first:
+        #             self.story.append(first)
+        #         if second:
+        #             self.story.append(second)
+        #     except Exception as e:
+        #         print("JSON parse error in continue:", e, story_text)
+        #         self.story.append(story_text.strip())  # fallback
+        #     self.is_image = False
+        #     return
 
 
         classify_prompt = [
@@ -162,6 +162,7 @@ class ChatWorker(QObject):
         else:
             # chat 답변
             print("[AI] is_story: False -> result: chat")
+
             chat_prompt = [
                 {
                     "role": "system",

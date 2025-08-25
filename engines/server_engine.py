@@ -189,6 +189,7 @@ class ServerEngine(BaseEngine):
     def generate_reply_stream(self, messages: List[Dict[str, str]], *, max_new_tokens: int = 128):
         url = f"{self.server_url.rstrip('/')}/{self.endpoint.lstrip('/')}"
         payload = self._compose_payload(messages, max_new_tokens, stream=True)
+        print(f"payload={payload}")
         try:
             with requests.post(url, headers=self.headers, json=payload, timeout=self.timeout, stream=True) as resp:
                 resp.raise_for_status()
