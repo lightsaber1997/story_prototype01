@@ -54,18 +54,37 @@ class ChatWorker(QObject):
 
 
 
+        # classify_prompt = [
+        #     {
+        #     "role": "system",
+        #     "content": textwrap.dedent("""
+        #         You are an assistant in a children's story app.
+        #         Reply with exactly one JSON object only:
+        #         {"is_story":"true"} if the input is part of a story
+        #         {"is_story":"false"} if it is a question or chat
+        #         Always use double quotes for both key and value. No other text.
+        #     """).strip(),
+        #     },
+        #     {"role": "user", "content": user_text},
+        # ]
+
+        story_context = " ".join(self.story[-10:])  # last 5 lines
         classify_prompt = [
             {
-            "role": "system",
-            "content": textwrap.dedent("""
-                You are an assistant in a children's story app.
-                Reply with exactly one JSON object only:
-                {"is_story":"true"} if the input is part of a story
-                {"is_story":"false"} if it is a question or chat
-                Always use double quotes for both key and value. No other text.
-            """).strip(),
+                "role": "system",
+                "content": textwrap.dedent("""
+                    You are an assistant in a children's story app.
+                    Classify the new input as part of the story or not.
+                    Reply with exactly one JSON object:
+                    {"is_story":"true"} if the input CONTINUES or ADDS TO the story
+                    {"is_story":"false"} if it is a question, chat, or unrelated.
+                    Always use double quotes, no other text.
+                """).strip(),
             },
-            {"role": "user", "content": user_text},
+            {
+                "role": "user",
+                "content": f"Story so far:\n{story_context}\n\nNew input:\n{user_text}",
+            },
         ]
 
 
