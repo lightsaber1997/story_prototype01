@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import os
+from PySide6 import QtCore
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QPixmap, QIcon
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
@@ -487,14 +489,11 @@ class StorybookArea(QFrame):
         # 우측: Export 버튼
         self.btnExportPDF = QPushButton("", self.pageNavFrame)
         self.btnExportPDF.setObjectName("btnExportPDF")
-        icon_dir = Path("assets/icon")
-        pdf_normal = icon_dir / "export_light.svg"
-        pdf_hover  = icon_dir / "export_strong.svg"
-        self._applySvgIconButton(self.btnExportPDF, str(pdf_normal), str(pdf_hover),
-                                size=ICON_SIZE, padding=ICON_PAD)
+        self._setExportPDFIcon()
         self.btnExportPDF.setToolTip("Export storybook as PDF")
         self.btnExportPDF.setCursor(Qt.PointingHandCursor)
-
+        # print("Exists?", os.path.exists(pdf_normal))
+        # print("Absolute path:", os.path.abspath(pdf_normal))
         rightSlot = QFrame(self.pageNavFrame)
         rightSlot.setFixedSize(BOX, BOX)
         rl = QHBoxLayout(rightSlot)
@@ -596,7 +595,6 @@ class StorybookArea(QFrame):
                     scaled_pixmap = pixmap.scaled(
                         self.imageArea.size(),
                         Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation
                     )
                     self.imageArea.setPixmap(scaled_pixmap)
                     print(f"스토리북에 이미지 표시 완료: {image_path}")
@@ -675,7 +673,9 @@ class StorybookArea(QFrame):
             버튼 텍스트/아이콘은 비워두고 background-image만 사용.
         """
         btn.setText("")
-        btn.setIcon(QIcon()) 
+        btn.setIcon(QIcon(normal_svg)) 
+        btn.setIconSize(QtCore.QSize(size, size))
+        print(f"[DEBUG] Applying SVG icon button: {btn.objectName()}")
         btn.setCursor(Qt.PointingHandCursor)
         # box = size + padding * 2
         # box=34
@@ -685,7 +685,6 @@ class StorybookArea(QFrame):
         obj = btn.objectName()
         btn.setStyleSheet(f"""
             QPushButton#{obj} {{
-                background: transparent;
                 border: none;
                 padding: {padding}px;
                 background-image: url({normal_svg});
@@ -695,30 +694,43 @@ class StorybookArea(QFrame):
             }}
             QPushButton#{obj}:hover {{
                 background-image: url({hover_svg});
-                background-color: rgba(42, 41, 53, 0.08);
             }}
             QPushButton#{obj}:pressed {{
-                background-color: rgba(42, 41, 53, 0.16);
-            }}
-            QPushButton#{obj}:disabled {{
-                background-image: url({normal_svg});
-                opacity: 0.45;
+                background-image: url({hover_svg});
+
             }}
         """)
 
     def _setReadAloudIdleIcon(self):
-        icon_dir = Path("assets/icon")
-        normal = icon_dir / "speaker_light.svg"
-        hover  = icon_dir / "speaker_strong.svg"
+        # icon_dir = Path("assets/icon")
+        # normal = icon_dir / "speaker_light.svg"
+        normal = os.path.join("assets", "icon", "speaker_light.svg")
+        hover  = os.path.join("assets", "icon", "speaker_strong.svg")
+        
         self._applySvgIconButton(self.btnReadAloud, str(normal), str(hover), size=22, padding=6)
         self.btnReadAloud.setToolTip("텍스트 읽어주기")
 
     def _setReadAloudStopIcon(self):
         icon_dir = Path("assets/icon")
-        normal = icon_dir / "speaker_strong.svg"
-        hover  = icon_dir / "speaker_light.svg"
+        # normal = icon_dir / "speaker_strong.svg"
+        normal = os.path.join("assets", "icon", "speaker_strong.svg")
+
+        # hover  = icon_dir / "speaker_light.svg"
+        hover = os.path.join("assets", "icon", "speaker_light.svg")
+
         self._applySvgIconButton(self.btnReadAloud, str(normal), str(hover), size=22, padding=6)
         self.btnReadAloud.setToolTip("읽기 중지")
+
+    def _setExportPDFIcon(self):
+        # icon_dir = Path("assets/icon")
+        # normal = icon_dir / "speaker_light.svg"
+        # Needs Edit!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+        normal = os.path.join("assets", "icon", "speaker_strong.png")
+        hover  = os.path.join("assets", "icon", "speaker_light.png")
+
+        self._applySvgIconButton(self.btnExportPDF, str(normal), str(hover), size=22, padding=6)
+        self.btnExportPDF.setToolTip("PDF로 내보내기")
+
 
     def readAloud(self):
         """Toggle TTS playback for the current text"""
