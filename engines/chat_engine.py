@@ -48,37 +48,10 @@ class ChatWorker(QObject):
 
     @Slot(str)
     def doWork(self, user_text: str):
-        # if self.is_image is True:
-        #     # 이야기 생성
-        #     print("[AI] First Story - Generate By Image")
-        #     story_context = " ".join(self.story[-100:])
-        #     continue_prompt = [
-        #         {
-        #             "role": "system",
-        #             "content": textwrap.dedent("""
-        #                 Continue this children's story in 2 lively sentences. 
-        #                 Make sure the reply forms a complete sentence and ends with a period.
-        #                 Respond with EXACTLY ONE JSON object, on a single line, no code block
-        #                 markers, no extra text. 
-        #                 {"first": "first sentence", "second": "second sentence"}
-        #             """).strip(),
-        #         },
-        #         {"role": "user", "content": story_context},
-        #     ]
-        #     story_text = self._stream_and_collect(continue_prompt, "story_continue", 120)
-        #     try:
-        #         obj = format_helper.get_first_json(story_text)
-        #         first = obj.get("first", "").strip()
-        #         second = obj.get("second", "").strip()
-        #         if first:
-        #             self.story.append(first)
-        #         if second:
-        #             self.story.append(second)
-        #     except Exception as e:
-        #         print("JSON parse error in continue:", e, story_text)
-        #         self.story.append(story_text.strip())  # fallback
-        #     self.is_image = False
-        #     return
+        ####################################
+        ### part 1
+        ####################################
+
 
 
         classify_prompt = [
@@ -93,7 +66,18 @@ class ChatWorker(QObject):
             {"role": "user", "content": user_text},
         ]
 
-        # Streaming으로 true/false 분류
+
+        # determin whether user input is story or not
+        is_story = False
+        try:
+            self.engine.generate_reply(
+                classify_prompt
+            )
+            
+        except:
+            print("is_story response error")
+
+
         is_story = False
         buffer = ""
         for token in self.engine.generate_reply_stream(classify_prompt, max_new_tokens=8):
