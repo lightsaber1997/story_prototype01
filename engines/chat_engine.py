@@ -94,6 +94,7 @@ class ChatWorker(QObject):
         ]
 
         # Streaming으로 true/false 분류
+        is_story = False
         buffer = ""
         for token in self.engine.generate_reply_stream(classify_prompt, max_new_tokens=8):
             buffer += token
