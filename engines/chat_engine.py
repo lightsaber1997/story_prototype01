@@ -113,7 +113,7 @@ class ChatWorker(QObject):
             
             self.story.append(fixed_line)
 
-            self.correction_ready.emit(self.correction_ready.emit({"type": "correction", "text": fixed_line}))
+            self.correction_ready.emit({"type": "correction", "text": fixed_line})
          
             
 
@@ -123,30 +123,26 @@ class ChatWorker(QObject):
                 {
                     "role": "system",
                     "content": textwrap.dedent("""
-                        Continue this children's story in 2 lively sentences. 
-                        Make sure the reply forms a complete sentence and ends with a period.
-                        Respond with EXACTLY ONE JSON object, on a single line, no code block
-                        markers, no extra text. 
-                        {"first":"first sentence", "second":"second sentence"}
+                        You are writing a children's story.
+                        Continue the story in exactly 2 lively sentences.
+                        Do not repeat the input, and do not explain your answer.
+                        Output only the 2 new sentences as plain text, nothing else.
                     """).strip(),
                 },
-                {"role": "user", "content": story_context},
+                {
+                    "role": "user",
+                    "content": f"Here is the story so far:\n{story_context}\n\nPlease continue.",
+                },
             ]
-            raw_story = self._stream_and_collect(continue_prompt, "story_continue", 120)
+
+            raw_story = self._stream_text(continue_prompt, "story_continue", 120)
             # ✅ UI는 위에서 emit으로 이미 실시간 스트리밍 출력됨
             # ✅ 내부적으로만 최종 JSON 파싱해서 self.story에 append
             if raw_story:
-                try:
-                    obj = format_helper.get_first_json(raw_story)
-                    first = obj.get("first", "")
-                    second = obj.get("second", "")
-                    if first:
-                        self.story.append(first)
-                    if second:
-                        self.story.append(second)
-                except Exception as e:
-                    print("JSON parse error in story_continue:", e, raw_story)
-                    self.story.append(raw_story)  # fallback
+                # Just treat raw_story as plain text continuation
+                lines = [s.strip() for s in raw_story.split("\n") if s.strip()]
+                for line in lines:
+                    self.story.append(line)
 
         else:
             # chat 답변
@@ -157,114 +153,147 @@ class ChatWorker(QObject):
                     "role": "system",
                     "content": textwrap.dedent("""
                         You are a helpful assistant for casual chat.
-                        Respond with EXACTLY ONE JSON object:
-                        {"answer":"..."}
                     """).strip(),
                 },
                 {"role": "user", "content": user_text}
             ]
-            self._stream_and_collect(chat_prompt, "chat", 120)
+            self._stream_text(chat_prompt, "chat", 120)
 
-    def _stream_and_collect(self, prompt, kind, max_new_tokens):
+    # def _stream_and_collect(self, prompt, kind, max_new_tokens):
+    #     accumulated = ""
+    #     prev_len = 0
+    #     buffer = ""
+    #     inside_value = False
+    #     after_colon = False
+
+    #     story_accum = ""  # story_continue일 때 전체 누적 버퍼
+    #     correction_final = None  # fixed_grammar/correction 최종 값 저장
+
+    #     print(f"[DEBUG] _stream_and_collect start (kind={kind}, max_new_tokens={max_new_tokens})")
+
+    #     for token in self.engine.generate_reply_stream(prompt, max_new_tokens=max_new_tokens):
+    #         accumulated += token
+    #         delta = accumulated[prev_len:]
+    #         prev_len = len(accumulated)
+    #         if not delta:
+    #             continue
+
+    #         for ch in delta:
+    #             if not inside_value:
+    #                 # 콜론 본 직후: 공백은 스킵, 첫 비공백이 따옴표면 value 시작
+    #                 if ch == ':':
+    #                     after_colon = True
+    #                     # 콜론 자체는 파싱 상태에만 쓰고 buffer에는 굳이 쌓지 않음
+    #                     continue
+
+    #                 if after_colon:
+    #                     if ch.isspace():
+    #                         # : 뒤 공백 허용
+    #                         continue
+    #                     if ch == '"':
+    #                         inside_value = True
+    #                         after_colon = False
+    #                         print(f"[DEBUG] Value start detected at pos={prev_len}")
+    #                         buffer = ""  # 현재 value 임시 버퍼
+    #                         continue
+    #                     after_colon = False
+    #             else:
+    #                 is_escaped = len(buffer) > 0 and buffer[-1] == '\\'
+    #                 if ch == '"' and not is_escaped:
+    #                     # ✅ value 종료 시점
+    #                     final_val = buffer.strip()
+    #                     print(f"[DEBUG] Value end detected (final='{final_val}')")
+
+    #                     if kind == "story_continue":
+    #                         if story_accum:
+    #                             story_accum += " "
+    #                         story_accum += final_val
+    #                         # 종료된 시점에서 전체 누적 emit
+    #                         self.token_story_continue_Ready.emit(story_accum, "story")
+
+    #                     elif kind == "chat":
+    #                         self.token_chat_Ready.emit(final_val, "chat")
+
+    #                     elif kind == "correction":
+    #                         correction_final = final_val
+    #                         self.token_correction_Ready.emit(final_val, "correction")
+
+    #                     buffer = ""
+    #                     inside_value = False
+    #                 else:
+    #                     buffer += ch
+    #                     if kind == "story_continue":
+    #                         temp_val = buffer.strip()
+    #                         if temp_val:
+    #                             temp_emit = (story_accum + " " + temp_val).strip()
+    #                             self.token_story_continue_Ready.emit(temp_emit, "story")
+    #                     elif kind == "chat":
+    #                         text = buffer.strip()
+    #                         if text:
+    #                             self.token_chat_Ready.emit(text, "chat")
+    #                     elif kind == "correction":
+    #                         text = buffer.strip()
+    #                         if text:
+    #                             self.token_correction_Ready.emit(text, "correction")
+
+    #     # 스트림이 끝났는데 value가 닫히지 않았을 때
+    #     if inside_value and buffer.strip():
+    #         final_val = buffer.strip()
+    #         if kind == "story_continue":
+    #             if story_accum:
+    #                 story_accum += " "
+    #             story_accum += final_val
+    #             self.token_story_continue_Ready.emit(story_accum, "story")
+    #         elif kind == "chat":
+    #             self.token_chat_Ready.emit(final_val, "chat")
+    #         elif kind == "correction":
+    #             correction_final = final_val
+    #             self.token_correction_Ready.emit(final_val, "correction")
+
+    #     print(f"[DEBUG] _stream_and_collect done (kind={kind}, total_len={len(accumulated)})")
+    #     print(f"[DEBUG] story_accum={story_accum}")
+
+    #     # resultReady로 최종 완성본 전달
+    #     if kind == "story_continue" and story_accum.strip():
+    #         self.resultReady.emit({"type": "story_answer", "text": story_accum.strip()})
+    #     elif kind == "correction" and correction_final:
+    #         self.resultReady.emit({"type": "correction_answer", "text": correction_final})
+    #     return accumulated
+
+    def _stream_text(self, prompt, kind, max_new_tokens):
+        """
+        Stream plain text from the engine and emit progressively.
+        No JSON parsing, only raw text accumulation.
+        """
         accumulated = ""
-        prev_len = 0
-        buffer = ""
-        inside_value = False
-        after_colon = False
-
-        story_accum = ""  # story_continue일 때 전체 누적 버퍼
-        correction_final = None  # fixed_grammar/correction 최종 값 저장
-
-        print(f"[DEBUG] _stream_and_collect start (kind={kind}, max_new_tokens={max_new_tokens})")
+        print(f"[DEBUG] _stream_text start (kind={kind}, max_new_tokens={max_new_tokens})")
 
         for token in self.engine.generate_reply_stream(prompt, max_new_tokens=max_new_tokens):
             accumulated += token
-            delta = accumulated[prev_len:]
-            prev_len = len(accumulated)
-            if not delta:
+            text = accumulated.strip()
+
+            if not text:
                 continue
 
-            for ch in delta:
-                if not inside_value:
-                    # 콜론 본 직후: 공백은 스킵, 첫 비공백이 따옴표면 value 시작
-                    if ch == ':':
-                        after_colon = True
-                        # 콜론 자체는 파싱 상태에만 쓰고 buffer에는 굳이 쌓지 않음
-                        continue
-
-                    if after_colon:
-                        if ch.isspace():
-                            # : 뒤 공백 허용
-                            continue
-                        if ch == '"':
-                            inside_value = True
-                            after_colon = False
-                            print(f"[DEBUG] Value start detected at pos={prev_len}")
-                            buffer = ""  # 현재 value 임시 버퍼
-                            continue
-                        after_colon = False
-                else:
-                    is_escaped = len(buffer) > 0 and buffer[-1] == '\\'
-                    if ch == '"' and not is_escaped:
-                        # ✅ value 종료 시점
-                        final_val = buffer.strip()
-                        print(f"[DEBUG] Value end detected (final='{final_val}')")
-
-                        if kind == "story_continue":
-                            if story_accum:
-                                story_accum += " "
-                            story_accum += final_val
-                            # 종료된 시점에서 전체 누적 emit
-                            self.token_story_continue_Ready.emit(story_accum, "story")
-
-                        elif kind == "chat":
-                            self.token_chat_Ready.emit(final_val, "chat")
-
-                        elif kind == "correction":
-                            correction_final = final_val
-                            self.token_correction_Ready.emit(final_val, "correction")
-
-                        buffer = ""
-                        inside_value = False
-                    else:
-                        buffer += ch
-                        if kind == "story_continue":
-                            temp_val = buffer.strip()
-                            if temp_val:
-                                temp_emit = (story_accum + " " + temp_val).strip()
-                                self.token_story_continue_Ready.emit(temp_emit, "story")
-                        elif kind == "chat":
-                            text = buffer.strip()
-                            if text:
-                                self.token_chat_Ready.emit(text, "chat")
-                        elif kind == "correction":
-                            text = buffer.strip()
-                            if text:
-                                self.token_correction_Ready.emit(text, "correction")
-
-        # 스트림이 끝났는데 value가 닫히지 않았을 때
-        if inside_value and buffer.strip():
-            final_val = buffer.strip()
             if kind == "story_continue":
-                if story_accum:
-                    story_accum += " "
-                story_accum += final_val
-                self.token_story_continue_Ready.emit(story_accum, "story")
+                self.token_story_continue_Ready.emit(text, "story")
             elif kind == "chat":
-                self.token_chat_Ready.emit(final_val, "chat")
+                self.token_chat_Ready.emit(text, "chat")
             elif kind == "correction":
-                correction_final = final_val
-                self.token_correction_Ready.emit(final_val, "correction")
+                self.token_correction_Ready.emit(text, "correction")
 
-        print(f"[DEBUG] _stream_and_collect done (kind={kind}, total_len={len(accumulated)})")
-        print(f"[DEBUG] story_accum={story_accum}")
+        print(f"[DEBUG] _stream_text done (kind={kind}, total_len={len(accumulated)})")
 
-        # resultReady로 최종 완성본 전달
-        if kind == "story_continue" and story_accum.strip():
-            self.resultReady.emit({"type": "story_answer", "text": story_accum.strip()})
-        elif kind == "correction" and correction_final:
-            self.resultReady.emit({"type": "correction_answer", "text": correction_final})
+        # Final delivery
+        if kind == "story_continue" and accumulated.strip():
+            self.resultReady.emit({"type": "story_answer", "text": accumulated.strip()})
+        elif kind == "correction" and accumulated.strip():
+            self.resultReady.emit({"type": "correction_answer", "text": accumulated.strip()})
+        elif kind == "chat" and accumulated.strip():
+            self.resultReady.emit({"type": "chat_answer", "text": accumulated.strip()})
+
         return accumulated
+
 
     @staticmethod
     def _nl2space(s: str) -> str:

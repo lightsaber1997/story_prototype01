@@ -4,7 +4,8 @@ llm:
   # 서버 설정
   server:
     url: "http://localhost:8080"
-    endpoint: "/chat_stream"
+    endpoint_sync: "/chat"        # sync (normal JSON response)
+    endpoint_stream: "/chat_stream"  # streaming response
     timeout_sec: 300
     payload_mode: "both"   # "messages" | "prompt" | "both"
     temperature: 0.7

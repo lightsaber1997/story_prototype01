@@ -13,7 +13,8 @@ class ServerEngine(BaseEngine):
         config = load_config()
         server_cfg = config["llm"].get("server", {})
         self.server_url = server_cfg.get("url", "http://localhost:8080")
-        self.endpoint = server_cfg.get("endpoint", "/chat_stream")
+        self.endpoint_sync = server_cfg.get("endpoint_sync", "/chat")
+        self.endpoint_stream = server_cfg.get("endpoint_stream", "/chat_stream")
         self.timeout = float(server_cfg.get("timeout_sec", 300))
         self.default_temperature = float(server_cfg.get("temperature", 0.7))
         self.default_top_p = float(server_cfg.get("top_p", 1.0))
@@ -175,7 +176,7 @@ class ServerEngine(BaseEngine):
     # Public API
     # -----------------------
     def generate_reply(self, messages: List[Dict[str, str]], *, max_new_tokens: int = 128) -> str:
-        url = f"{self.server_url.rstrip('/')}/{self.endpoint.lstrip('/')}"
+        url = f"{self.server_url.rstrip('/')}/{self.endpoint_sync.lstrip('/')}"
         payload = self._compose_payload(messages, max_new_tokens, stream=False)
         try:
             r = requests.post(url, headers=self.headers, json=payload, timeout=self.timeout)
@@ -187,7 +188,7 @@ class ServerEngine(BaseEngine):
             return f"[ServerEngine error] {str(e)}"
 
     def generate_reply_stream(self, messages: List[Dict[str, str]], *, max_new_tokens: int = 128):
-        url = f"{self.server_url.rstrip('/')}/{self.endpoint.lstrip('/')}"
+        url = f"{self.server_url.rstrip('/')}/{self.endpoint_stream.lstrip('/')}"
         payload = self._compose_payload(messages, max_new_tokens, stream=True)
         print(f"payload={payload}")
         try:
