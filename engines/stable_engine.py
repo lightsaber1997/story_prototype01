@@ -29,7 +29,7 @@ class StableV15Engine:
         prompt: str,
         *,
         negative_prompt: Optional[str] = None,
-        num_inference_steps: int = 30,
+        num_inference_steps: int = 10,
         guidance_scale: float = 7.5,
         height: int = 512,
         width: int = 512,

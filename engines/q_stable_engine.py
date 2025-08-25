@@ -66,7 +66,6 @@ class QStableV21Engine:
         pil_img = Image.fromarray(to_uint8(np.asarray(image))[0])
         return pil_img
 
-
     @staticmethod
     def save_image(img, path: Union[str, Path]) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)

@@ -86,6 +86,10 @@ class MainApp(QMainWindow):
             vae_decoder_path = r"C:\DYS\merge_SD\story_prototype01\data\models\vae_decoder.onnx\model.onnx"
             unet_path = r"C:\DYS\merge_SD\story_prototype01\data\models\unet.onnx\model.onnx"
 
+
+            # CHOOSE ENGINE
+            # self.image_gen_engine = StableV15Engine()
+            
             # 이미지 생성 엔진
             self.image_gen_engine = QStableV21Engine(
             text_encoder=text_encoder_path,
@@ -93,7 +97,7 @@ class MainApp(QMainWindow):
             unet=unet_path,
             scheduler="ddim",
             channel_last_latent=True
-        )
+            )
             
             self.image_gen_controller = ImageGenController(
                 self._on_image_gen_ready,
@@ -230,7 +234,7 @@ class MainApp(QMainWindow):
 
             # 이미지 저장
             save_path = f"images/page_{page_idx + 1}.png"
-            QStableV21Engine.save_image(image, save_path)
+            self.image_gen_engine.save_image(image, save_path)
             self.page_images[page_idx] = save_path
 
             print(f"[Image] Saved to {save_path} from prompt: {prompt}")
