@@ -272,7 +272,7 @@ class MainApp(QMainWindow):
             text = payload["text"]
             print(f"[Img2Text] {text}")
 
-            
+            self._append_to_story(text)
 
         elif payload["type"] == "error":
             QMessageBox.critical(self, "이미지 인식 오류", f"OCR 실패: {payload['error']}")
