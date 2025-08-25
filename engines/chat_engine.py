@@ -104,8 +104,7 @@ class ChatWorker(QObject):
 
             try:
                 fixed_generated = self.engine.generate_reply(fix_prompt)
-                print(f"[DEBUG] is_story generated={generated}")
-                # Parse JSON string to Python dict
+                print(f"[DEBUG] fixed_generated={fixed_generated}")
                 fixed_line = fixed_generated
 
             except Exception as e:
