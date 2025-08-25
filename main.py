@@ -272,9 +272,7 @@ class MainApp(QMainWindow):
             text = payload["text"]
             print(f"[Img2Text] {text}")
 
-            # Feed result into chat controller as if user typed it
-            if hasattr(self, 'chat_controller'):
-                self.chat_controller.operate.emit(text)
+            
 
         elif payload["type"] == "error":
             QMessageBox.critical(self, "이미지 인식 오류", f"OCR 실패: {payload['error']}")
