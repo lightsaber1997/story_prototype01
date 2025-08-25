@@ -53,7 +53,7 @@ class HomeWindow(QMainWindow):
         self._main = MainApp()
         self._main.show()
         self.close()
-        self._main.handleImageInput(file_path)
+        self._main.img_to_text_controller.operate.emit(file_path)
 
 
 
@@ -267,7 +267,7 @@ class MainApp(QMainWindow):
     #             "text": image_ocr_text
     #         }))
 
-    def _on_img2text_ready(self, payload: dict):
+    def _on_img_to_text_ready(self, payload: dict):
         if payload["type"] == "img2text":
             text = payload["text"]
             print(f"[Img2Text] {text}")
