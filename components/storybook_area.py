@@ -687,7 +687,7 @@ class StorybookArea(QFrame):
             QPushButton#{obj} {{
                 border: none;
                 padding: {padding}px;
-                background-image: url({normal_svg});
+                background-color: transparent;
                 background-repeat: no-repeat;
                 background-position: center;
                 border-radius: {max(6, padding)}px;
@@ -724,9 +724,8 @@ class StorybookArea(QFrame):
     def _setExportPDFIcon(self):
         # icon_dir = Path("assets/icon")
         # normal = icon_dir / "speaker_light.svg"
-        # Needs Edit!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
-        normal = os.path.join("assets", "icon", "speaker_strong.png")
-        hover  = os.path.join("assets", "icon", "speaker_light.png")
+        normal = os.path.join("assets", "icon", "export_2.svg")
+        hover  = os.path.join("assets", "icon", "export_2.svg")
 
         self._applySvgIconButton(self.btnExportPDF, str(normal), str(hover), size=22, padding=6)
         self.btnExportPDF.setToolTip("PDF로 내보내기")
