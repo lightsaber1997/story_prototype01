@@ -20,7 +20,7 @@ class NavigationBar(QFrame):
         self.setObjectName("navigationBar")
         self.setFixedWidth(180)
         
-        # 스타일 설정 - main_ui_colorful.py의 메인 배경색 적용
+        # 스타일 설정 
         self.setStyleSheet("""
             QFrame#navigationBar {
                 background-color: #0c192e;
@@ -70,7 +70,7 @@ class NavigationBar(QFrame):
         self.btnHome.setCursor(Qt.PointingHandCursor)
 
         # 새 스토리 버튼
-        self.btnNewStory = QPushButton(" New Story", self)
+        self.btnNewStory = QPushButton(" My Story", self)
         self.btnNewStory.setObjectName("btnNewStory")
         self.btnNewStory.setToolTip("새 스토리")
         self.btnNewStory.setIcon(QIcon("assets/icon/chat.svg"))
@@ -80,13 +80,13 @@ class NavigationBar(QFrame):
 
 
         # 저장된 스토리 버튼
-        self.btnSavedStories = QPushButton(" List", self)
-        self.btnSavedStories.setObjectName("btnSavedStories")
-        self.btnSavedStories.setToolTip("저장된 스토리")
-        self.btnSavedStories.setIcon(QIcon("assets/icon/book.svg"))
-        self.btnSavedStories.setIconSize(QSize(22, 22))
-        self.btnSavedStories.setStyleSheet(button_style)
-        self.btnSavedStories.setCursor(Qt.PointingHandCursor)
+        # self.btnSavedStories = QPushButton(" List", self)
+        # self.btnSavedStories.setObjectName("btnSavedStories")
+        # self.btnSavedStories.setToolTip("저장된 스토리")
+        # self.btnSavedStories.setIcon(QIcon("assets/icon/book.svg"))
+        # self.btnSavedStories.setIconSize(QSize(22, 22))
+        # self.btnSavedStories.setStyleSheet(button_style)
+        # self.btnSavedStories.setCursor(Qt.PointingHandCursor)
 
         
         # 설정 버튼
@@ -113,7 +113,7 @@ class NavigationBar(QFrame):
         # 레이아웃에 버튼 추가
         self.layout.addWidget(self.btnHome)
         self.layout.addWidget(self.btnNewStory)
-        self.layout.addWidget(self.btnSavedStories)
+        # self.layout.addWidget(self.btnSavedStories)
         self.layout.addStretch()  # 중간에 여백
         self.layout.addWidget(self.btnSettings)
         self.layout.addWidget(self.btnHelp)
@@ -127,7 +127,8 @@ class NavigationBar(QFrame):
     def setActiveButton(self, button_name: str):
         """활성 버튼 표시"""
         # 모든 버튼을 기본 상태로 리셋
-        buttons = [self.btnHome, self.btnSettings, self.btnHelp, self.btnNewStory, self.btnSavedStories]
+        # buttons = [self.btnHome, self.btnSettings, self.btnHelp, self.btnNewStory, self.btnSavedStories]
+        buttons = [self.btnHome, self.btnSettings, self.btnHelp, self.btnNewStory]
         for btn in buttons:
             btn.setProperty("active", False)
         
@@ -140,8 +141,8 @@ class NavigationBar(QFrame):
             self.btnHelp.setProperty("active", True)
         elif button_name == "new_story":
             self.btnNewStory.setProperty("active", True)
-        elif button_name == "saved_stories":
-            self.btnSavedStories.setProperty("active", True)
+        # elif button_name == "saved_stories":
+        #     self.btnSavedStories.setProperty("active", True)
         
         # 스타일 업데이트
         self.style().unpolish(self)
