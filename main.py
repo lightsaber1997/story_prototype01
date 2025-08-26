@@ -89,7 +89,13 @@ class MainApp(QWidget):
                 self.image_gen_engine
             )
 
-            self.img_to_text_engine = DummyImgToTextEngine()
+            # self.img_to_text_engine = DummyImgToTextEngine()
+            # self.img_to_text_controller = ImgToTextController(
+            #     self.img_to_text_engine,
+            #     self._on_img_to_text_ready
+            # )
+
+            self.img_to_text_engine = ClipImgToTextEngine(base_dir)
             self.img_to_text_controller = ImgToTextController(
                 self.img_to_text_engine,
                 self._on_img_to_text_ready
@@ -197,7 +203,9 @@ class MainApp(QWidget):
 
     def _on_img_to_text_ready(self, payload: dict):
         if payload["type"] == "img2text":
-            text = payload["text"]
+            matches = payload["matches"]
+            # select the first one
+            text = matches[0]
             print(f"[Img2Text] {text}")
             print(f"_on_img_to_text_ready")
 

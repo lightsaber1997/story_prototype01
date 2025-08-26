@@ -14,3 +14,12 @@ llm:
   # 스트림 설정
   chat_response_streaming:
     enabled: true
+  
+img_to_text:
+  engine: "clip"
+
+  option:
+    image_encoder_path: "data/clip_onnx/clip_image_encoder.onnx"
+    text_encoder_path: "data/clip_onnx/text_encoder.onnx"
+    text_features_norm: "data/text_features_cache.npy" # should be already normalized
+    text_features_labels: "data/text_features_labels.txt" # txt file
