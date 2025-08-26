@@ -22,12 +22,13 @@ from engines.stable_engine import StableV15Engine
 from engines.q_stable_engine import QStableV21Engine
 from engines.image_gen_engine import *
 from engines.img_to_text_engine import *
+from engines.AILoaderThread import AILoaderThread
 
 class MainApp(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUI()
-        self.setupAI()
+        # self.setupAI()
         self.connectSignals()
 
         # 스토리 관리 변수들
@@ -36,9 +37,13 @@ class MainApp(QWidget):
         self.page_images: Dict[int, str] = {}  # 각 페이지별 생성된 이미지
         self.story_parts: List[str] = []
 
+        # AI 모델들을 백그라운드에서 로딩
+        self.ai_ready = False
+        self.loaded_models = {}
+        self.startAILoading()
+        
         # 초기 상태 설정
         self.updateUI()
-
         self._new_story_started = False
 
     def setupUI(self):
@@ -56,50 +61,104 @@ class MainApp(QWidget):
         layout.addWidget(self.storybookArea, 5)
 
 
-    def setupAI(self):
-        """AI 엔진 설정"""
-        try:
-            # llm 모델 가져오고 컨트롤러 설정
-            self.chat_controller = get_chat_controller(
-                result_callback=self._on_chat_reply
-            )
+    # def setupAI(self):
+    #     """AI 엔진 설정"""
+    #     try:
+    #         # llm 모델 가져오고 컨트롤러 설정
+    #         self.chat_controller = get_chat_controller(
+    #             result_callback=self._on_chat_reply
+    #         )
 
+    #         # 시그널 연결
+    #         self.chat_controller.worker.token_chat_Ready.connect(self._on_token_chat)
+    #         self.chat_controller.worker.correction_ready.connect(self._on_correction_ready)
+    #         self.chat_controller.worker.token_story_continue_Ready.connect(self._on_token_story_continue)
+
+    #         base_dir = os.path.dirname(__file__)  # 또는 os.getcwd() 가능
+
+    #         text_encoder_path = os.path.join(base_dir, "data", "models", "text_encoder.onnx", "model.onnx")
+    #         vae_decoder_path = os.path.join(base_dir, "data", "models", "vae_decoder.onnx", "model.onnx")
+    #         unet_path = os.path.join(base_dir, "data", "models", "unet.onnx", "model.onnx")
+
+    #         # 이미지 생성 엔진
+    #         self.image_gen_engine = QStableV21Engine(
+    #             text_encoder=text_encoder_path,
+    #             vae_decoder=vae_decoder_path,
+    #             unet=unet_path,
+    #             scheduler="ddim",
+    #             channel_last_latent=True
+    #         )
+            
+    #         self.image_gen_controller = ImageGenController(
+    #             self._on_image_gen_ready,
+    #             self.image_gen_engine
+    #         )
+
+    #         self.img_to_text_engine = DummyImgToTextEngine()
+    #         self.img_to_text_controller = ImgToTextController(
+    #             self.img_to_text_engine,
+    #             self._on_img_to_text_ready
+    #         )
+
+    #         print("AI 엔진 초기화 완료")
+    #     except Exception as e:
+    #         print(f"AI 엔진 초기화 실패: {e}")
+    #         QMessageBox.warning(self, "AI 엔진 오류", f"AI 엔진 초기화에 실패했습니다: {e}")
+    def startAILoading(self):
+            """AI 모델들을 백그라운드에서 로딩 시작"""
+            base_dir = os.path.dirname(__file__)
+            self.ai_loader = AILoaderThread(base_dir)
+            
+            # 시그널 연결
+            self.ai_loader.model_loaded.connect(self.onModelLoaded)
+            self.ai_loader.all_loaded.connect(self.onAllModelsLoaded)
+            self.ai_loader.error_occurred.connect(self.onLoadingError)
+            
+            self.ai_loader.start()
+
+    def onModelLoaded(self, model_name, model):
+        """개별 모델 로딩 완료"""
+        self.loaded_models[model_name] = model
+        print(f"{model_name} 모델 로딩 완료")
+
+    def onAllModelsLoaded(self):
+        """모든 모델 로딩 완료"""
+        try:
+            # 로딩된 모델들을 실제 컨트롤러에 연결
+            self.chat_controller = self.loaded_models["chat"]
+            # 이제 실제 콜백을 연결
+            self.chat_controller.result_callback = self._on_chat_reply
+            
             # 시그널 연결
             self.chat_controller.worker.token_chat_Ready.connect(self._on_token_chat)
             self.chat_controller.worker.correction_ready.connect(self._on_correction_ready)
             self.chat_controller.worker.token_story_continue_Ready.connect(self._on_token_story_continue)
-
-            base_dir = os.path.dirname(__file__)  # 또는 os.getcwd() 가능
-
-            text_encoder_path = os.path.join(base_dir, "data", "models", "text_encoder.onnx", "model.onnx")
-            vae_decoder_path = os.path.join(base_dir, "data", "models", "vae_decoder.onnx", "model.onnx")
-            unet_path = os.path.join(base_dir, "data", "models", "unet.onnx", "model.onnx")
-
-            # 이미지 생성 엔진
-            self.image_gen_engine = QStableV21Engine(
-                text_encoder=text_encoder_path,
-                vae_decoder=vae_decoder_path,
-                unet=unet_path,
-                scheduler="ddim",
-                channel_last_latent=True
-            )
             
+            # 이미지 컨트롤러 설정
+            self.image_gen_engine = self.loaded_models["image_gen"]
             self.image_gen_controller = ImageGenController(
                 self._on_image_gen_ready,
                 self.image_gen_engine
             )
-
-            self.img_to_text_engine = DummyImgToTextEngine()
+            
+            self.img_to_text_engine = self.loaded_models["img_to_text"]
             self.img_to_text_controller = ImgToTextController(
                 self.img_to_text_engine,
                 self._on_img_to_text_ready
             )
-
-            print("AI 엔진 초기화 완료")
+            
+            self.ai_ready = True
+            print("✅ AI 준비 완료! 스토리를 입력해주세요.")
+            print("모든 AI 엔진 초기화 완료")
+            
         except Exception as e:
-            print(f"AI 엔진 초기화 실패: {e}")
-            QMessageBox.warning(self, "AI 엔진 오류", f"AI 엔진 초기화에 실패했습니다: {e}")
+            self.onLoadingError(f"모델 연결 실패: {e}")
 
+    def onLoadingError(self, error_msg):
+        """로딩 에러 처리"""
+        print(f"AI 모델 로딩 실패: {error_msg}")
+        QMessageBox.warning(self, "AI 엔진 오류", f"AI 모델 로딩에 실패했습니다: {error_msg}")
+    
     def connectSignals(self):
         """시그널 연결"""
         # 네비게이션 바 시그널
@@ -117,14 +176,21 @@ class MainApp(QWidget):
     def closeEvent(self, event):
         """애플리케이션 종료 시 스레드 정리"""
         try:
-            if hasattr(self, 'chat_controller'):
+            # AILoader 스레드 정리
+            if hasattr(self, 'ai_loader') and self.ai_loader and self.ai_loader.isRunning():
+                self.ai_loader.quit()
+                self.ai_loader.wait(3000)
+            
+            if hasattr(self, 'chat_controller') and self.chat_controller:
                 self.chat_controller.workerThread.quit()
                 self.chat_controller.workerThread.wait(3000)
-            if hasattr(self, 'image_gen_controller'):
+                
+            if hasattr(self, 'image_gen_controller') and self.image_gen_controller:
                 self.image_gen_controller.workerThread.quit()
                 self.image_gen_controller.workerThread.wait(3000)
-        except:
-            pass
+        except Exception as e:
+            print(f"스레드 정리 중 오류: {e}")
+        
         event.accept()
 
     # ========== 이벤트 핸들러들 ==========
