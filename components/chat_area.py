@@ -5,7 +5,7 @@ from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QListWidget, QTextEdit, QPushButton,
     QListWidgetItem, QStyledItemDelegate, QGraphicsDropShadowEffect,
-    QHBoxLayout, QWidget, QSizePolicy
+    QHBoxLayout, QWidget, QSizePolicy, QAbstractItemView, QApplication
 )
 from PySide6.QtGui import QColor, QPainter, QPen, QBrush
 
@@ -277,7 +277,8 @@ class ChatArea(QFrame):
         max_content_w = max(140, int(max_width * MAX_RATIO) - (PAD_X*2) - WRAP_M)
         label.setWordWrap(True)
         label.setMaximumWidth(max_content_w)
-        label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        
         # label.setFixedWidth(content_w)                    # ★ 라벨 폭 고정(줄바꿈 기준)
         # panel.setFixedWidth(content_w + PAD_X*2)          # 패널 폭도 고정
         # panel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
@@ -339,6 +340,8 @@ class ChatArea(QFrame):
         
         # 채팅 리스트
         self.chatList = QListWidget(self)
+        self.chatList.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.chatList.setUniformItemSizes(False)
         self.chatList.setObjectName("chatList")
         self.chatList.setWordWrap(True)
         
@@ -380,10 +383,11 @@ class ChatArea(QFrame):
                 border-radius: 16px;
                 padding: 8px;
             }
-            QListWidget::item { margin: 6px 8px; padding: 0px; border: none; }
+            QListWidget::item { padding: 0px; border: none; }
             QListWidget::item:selected { background: transparent; }
             QListWidget::item:hover { background: transparent; }
         """)
+        self.chatList.setSpacing(8)
 
         
         # 입력 영역
@@ -501,25 +505,46 @@ class ChatArea(QFrame):
         role = "user" if is_user else (message_type if message_type in ("chat", "story", "correction") else "chat")
 
         item = QListWidgetItem()
-        # 리스트 뷰 폭 기반으로 버블 생성
         viewport_w = self.chatList.viewport().width() or self.chatList.width()
         bubble = self._createBubbleWidget(text, role, viewport_w)
-        bubble.layout().activate()
-        bubble.adjustSize()
 
-        # message_type 설정
+        # 메시지 타입 보관
         bubble.message_type = message_type
 
-        size = bubble.sizeHint()
-        size.setHeight(size.height() + 14)
-
-        # 높이 힌트 설정
-        # bubble.resize(min(int(viewport_w * 0.72), bubble.sizeHint().width()), bubble.sizeHint().height())
-        item.setSizeHint(size)
-
+        # 초기 힌트(대략치) 세팅 후 뷰에 부착
+        item.setSizeHint(bubble.sizeHint())
         self.chatList.addItem(item)
         self.chatList.setItemWidget(item, bubble)
+
+        # ▶ 실제 폭/높이 확정 반영(스크롤 범위 포함)
+        self._reflow_item(item, bubble)
+
         self.chatList.scrollToBottom()
+
+
+    # def addMessage(self, text: str, is_user: bool = False, message_type: str = "normal"):
+    #     role = "user" if is_user else (message_type if message_type in ("chat", "story", "correction") else "chat")
+
+    #     item = QListWidgetItem()
+    #     # 리스트 뷰 폭 기반으로 버블 생성
+    #     viewport_w = self.chatList.viewport().width() or self.chatList.width()
+    #     bubble = self._createBubbleWidget(text, role, viewport_w)
+    #     bubble.layout().activate()
+    #     bubble.adjustSize()
+
+    #     # message_type 설정
+    #     bubble.message_type = message_type
+
+    #     size = bubble.sizeHint()
+    #     size.setHeight(size.height() + 14)
+
+    #     # 높이 힌트 설정
+    #     # bubble.resize(min(int(viewport_w * 0.72), bubble.sizeHint().width()), bubble.sizeHint().height())
+    #     item.setSizeHint(size)
+
+    #     self.chatList.addItem(item)
+    #     self.chatList.setItemWidget(item, bubble)
+    #     self.chatList.scrollToBottom()
     
     def clearChat(self):
         """채팅 내용 지우기"""
@@ -533,39 +558,56 @@ class ChatArea(QFrame):
         """입력 텍스트 설정"""
         self.textEdit_childStory.setPlainText(text)
 
+    def _reflow_item(self, item: QListWidgetItem, widget: QWidget):
+        """
+        아이템-위젯 쌍의 레이아웃/높이/스크롤 범위를 즉시 재계산.
+        """
+        # 1) 라벨 폭(줄바꿈 기준) 갱신
+        viewport_w = self.chatList.viewport().width() or self.chatList.width()
+        MAX_RATIO = 0.72
+        PAD_X = 16
+        WRAP_M = 8 + 8
+        max_content_w = max(140, int(viewport_w * MAX_RATIO) - (PAD_X*2) - WRAP_M)
+
+        label = widget.findChild(QLabel)
+        if label:
+            label.setWordWrap(True)
+            # setFixedWidth -> setMaximumWidth 로 변경 (뷰 리사이즈 대응)
+            label.setMaximumWidth(max_content_w)
+            label.updateGeometry()
+
+        # 2) 레이아웃 강제 활성화 및 위젯 사이즈 재계산
+        if widget.layout():
+            widget.layout().activate()
+        widget.adjustSize()
+        widget.updateGeometry()
+
+        # 3) 행 높이 힌트 갱신 및 뷰 재배치/지오메트리 갱신
+        item.setSizeHint(widget.sizeHint())
+        self.chatList.scheduleDelayedItemsLayout()
+        self.chatList.updateGeometries()
+
+
     def updateStreamingMessage(self, newText: str, message_type: str):
         """
         스트리밍 메시지 UI 업데이트
         """
-        # 마지막 버블 확인
         count = self.chatList.count()
         if count > 0:
             last_item = self.chatList.item(count - 1)
             last_widget = self.chatList.itemWidget(last_item)
 
-            # 마지막 버블의 타입을 가져오기
             last_type = getattr(last_widget, "message_type", None)
-
             if last_type == message_type:
                 label = last_widget.findChild(QLabel)
                 if label:
+                    # 텍스트 갱신
                     label.setText(newText)
 
-                    # 폭 제한 & 높이 널널하게 재계산
-                    viewport_w = self.chatList.viewport().width() or self.chatList.width()
-                    max_w = int(viewport_w * 0.72)
-                    label.setWordWrap(True)
-                    label.setFixedWidth(max_w)
+                    # ▶ 행 높이/스크롤 범위 재계산 (가장 중요)
+                    self._reflow_item(last_item, last_widget)
 
-                    # 레이아웃 다시 계산
-                    last_widget.layout().activate()
-                    label.adjustSize()
-
-                    # 널널한 높이 반영
-                    hint = last_widget.sizeHint()
-                    hint.setHeight(hint.height() + 16)  # padding
-                    last_item.setSizeHint(hint)
-
+                    # 스크롤을 실제로 내림
                     self.chatList.scrollToBottom()
                 return
 
