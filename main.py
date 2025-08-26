@@ -4,8 +4,8 @@ import sys, re, json, textwrap, random, string, collections
 from pathlib import Path
 from typing import Dict, List
 
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox
-from PySide6.QtCore import QSignalBlocker
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStackedWidget, QHBoxLayout, QWidget
+from PySide6.QtCore import QSignalBlocker, Qt
 from PySide6.QtGui import QPalette, QBrush, QColor
 
 # 컴포넌트 임포트
@@ -23,43 +23,9 @@ from engines.q_stable_engine import QStableV21Engine
 from engines.image_gen_engine import *
 
 
-class HomeWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("MyStoryPal")
-        self.resize(980, 680)
-
-        # 배경
-        pal = self.palette()
-        pal.setColor(QPalette.Window, QColor(255, 255, 255))
-        self.setPalette(pal)
-
-        home = HomeScreen(logo_path="assets/logo.png")
-        # home.startRequested.connect(self._go_main)
-        home.imageUploaded.connect(self._onImageUploaded)
-        # 선택: 보조 버튼 연결하려면 여기서 connect하면 됨.
-        self.setCentralWidget(home)
-
-        self._main = None  # MainApp 보관용
-
-    def _go_main(self):
-        # 메인 앱 띄우고 홈은 닫기
-        self._main = MainApp()
-        self._main.show()
-        self.close()
-
-    def _onImageUploaded(self, file_path: str):
-        # execute MainApp + deliver image
-        self._main = MainApp()
-        self._main.show()
-        self.close()
-        self._main.handleImageInput(file_path)
-
-
-
-class MainApp(QMainWindow):
-    def __init__(self):
-        super().__init__()
+class MainApp(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.setupUI()
         self.setupAI()
         self.connectSignals()
@@ -77,38 +43,18 @@ class MainApp(QMainWindow):
 
     def setupUI(self):
         """UI 설정"""
-        self.setWindowTitle("MyStoryPal")
-        self.setMinimumSize(1200, 700)
-        self.resize(1400, 800)  # 더 적당한 크기로 조정
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-        # 메인 배경색 설정
-        palette = QPalette()
-        brush = QBrush(QColor(85, 175, 240, 255))  # main_ui_colorful.py와 동일한 파란색
-        brush.setStyle(Qt.BrushStyle.SolidPattern)
-        palette.setBrush(QPalette.ColorGroup.Active, QPalette.ColorRole.Window, brush)
-        palette.setBrush(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Window, brush)
-        palette.setBrush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Base, brush)
-        palette.setBrush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Window, brush)
-        self.setPalette(palette)
-
-        # 중앙 위젯 설정
-        self.centralWidget = QWidget()
-        self.setCentralWidget(self.centralWidget)
-
-        # 메인 수평 레이아웃
-        self.mainLayout = QHBoxLayout(self.centralWidget)
-        self.mainLayout.setContentsMargins(0, 0, 0, 0)
-        self.mainLayout.setSpacing(0)
-
-        # 컴포넌트들 생성 및 추가
         self.navigationBar = NavigationBar()
         self.chatArea = ChatArea()
         self.storybookArea = StorybookArea()
 
-        # 레이아웃에 컴포넌트 추가 - 3:5 비율로 조정
-        self.mainLayout.addWidget(self.navigationBar)  # 고정 너비 (80px)
-        self.mainLayout.addWidget(self.chatArea, 3)  # 채팅 영역 3
-        self.mainLayout.addWidget(self.storybookArea, 5)  # 스토리북 영역 5
+        layout.addWidget(self.navigationBar, 1)
+        layout.addWidget(self.chatArea, 3)
+        layout.addWidget(self.storybookArea, 5)
+
 
     def setupAI(self):
         """AI 엔진 설정"""
@@ -178,19 +124,8 @@ class MainApp(QMainWindow):
 
     def onHomeClicked(self):
         """홈 버튼 클릭"""
-        self.navigationBar.setActiveButton("home")
-        # 저장 여부 확인이 필요하면 아래 주석 해제해서 사용 (선택)
-        # if self.story_pages_list:
-        #     r = QMessageBox.question(self, "확인", "작성 중인 스토리를 저장하지 않고 홈으로 이동할까요?",
-        #                              QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        #     if r != QMessageBox.Yes:
-        #         return
-
-        # HomeWindow를 띄우고 현재 MainApp을 종료
-        # HomeWindow는 이 파일에 정의되어 있다고 가정 (import 불필요)
-        self._homeWindow = HomeWindow()
-        self._homeWindow.show()
-        self.close()
+        main_window: MainWindow = self.window()
+        main_window.showHome()
 
     def onSettingsClicked(self):
         """설정 버튼 클릭"""
@@ -211,7 +146,7 @@ class MainApp(QMainWindow):
 
     def onHelpClicked(self):
         """도움말 버튼 클릭"""
-        self.navigationBar.setActiveButton("help")
+        # self.navigationBar.setActiveButton("help")
         QMessageBox.information(self, "도움말",
                                 "MyStoryPal 사용법:\n\n"
                                 "1. 채팅창에 스토리를 입력하세요\n"
@@ -221,11 +156,11 @@ class MainApp(QMainWindow):
 
     def onMessageSent(self, message: str):
         """메시지 전송 처리"""
-        self._new_story_started = True
 
         if not message.strip():
             QMessageBox.warning(self, "입력 오류", "스토리를 입력해주세요!")
             return
+        self._new_story_started = True
 
         # 사용자 메시지를 채팅에 추가
         self.chatArea.addMessage(message, is_user=True)
@@ -418,9 +353,38 @@ class MainApp(QMainWindow):
             self.storybookArea.setStoryText("", page=self.current_page_idx, animated=False)
             self.storybookArea.clearImage()
 
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("MyStoryPal")
+        self.resize(1200, 700)
+
+        self.stack = QStackedWidget()
+        self.setCentralWidget(self.stack)
+
+        # 홈 화면&메인 앱
+        self.home = HomeScreen(logo_path="assets/logo.png")
+        self.mainApp = MainApp()
+
+        self.stack.addWidget(self.home)
+        self.stack.addWidget(self.mainApp)
+
+        # 시그널 연결
+        self.home.startRequested.connect(self.showMainApp)
+        self.home.imageUploaded.connect(self.onImageUploaded)
+
+    def showMainApp(self):
+        self.stack.setCurrentWidget(self.mainApp)
+
+    def showHome(self):
+        self.stack.setCurrentWidget(self.home)
+
+    def onImageUploaded(self, file_path: str):
+        self.showMainApp()
+        self.mainApp.handleImageInput(file_path)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = HomeWindow()
+    window = MainWindow()
     window.show()
     sys.exit(app.exec())
