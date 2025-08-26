@@ -199,13 +199,17 @@ class MainApp(QWidget):
         if payload["type"] == "img2text":
             text = payload["text"]
             print(f"[Img2Text] {text}")
+            print(f"_on_img_to_text_ready")
 
+            # 1) ChatArea에도 메시지 추가
+            self.chatArea.addMessage(text, is_user=False, message_type="chat")
+
+            # 2) Storybook에도 반영
             self._append_to_story(text)
 
         elif payload["type"] == "error":
             QMessageBox.critical(self, "이미지 인식 오류", f"OCR 실패: {payload['error']}")
 
-            
     def _on_chat_reply(self, payload: Dict[str, str]) -> None:
         kind = payload.get("type")
         text = payload.get("text", "")
