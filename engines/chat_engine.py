@@ -69,15 +69,40 @@ class ChatWorker(QObject):
         # ]
 
         story_context = " ".join(self.story[-10:])  # last 5 lines
+        # classify_prompt = [
+        #     {
+        #         "role": "system",
+        #         "content": textwrap.dedent("""
+        #             You are an assistant in a children's story app.
+        #             Classify the new input as part of the story or not.
+        #             Reply with exactly one JSON object:
+        #             {"is_story":"true"} if the input CONTINUES or ADDS TO the story
+        #             {"is_story":"false"} if it is a question, chat, or unrelated.
+        #             Always use double quotes, no other text.
+        #         """).strip(),
+        #     },
+        #     {
+        #         "role": "user",
+        #         "content": f"Story so far:\n{story_context}\n\nNew input:\n{user_text}",
+        #     },
+        # ]
+
+
         classify_prompt = [
             {
                 "role": "system",
                 "content": textwrap.dedent("""
                     You are an assistant in a children's story app.
-                    Classify the new input as part of the story or not.
-                    Reply with exactly one JSON object:
-                    {"is_story":"true"} if the input CONTINUES or ADDS TO the story
-                    {"is_story":"false"} if it is a question, chat, or unrelated.
+                    Classify the new input as part of the story or not based on story so far.
+                    
+                    Treat the input as {"is_story":"true"} if it:
+                    - Continues the narrative, OR
+                    - Adds new characters, places, or events, even if loosely related, OR
+                    - Is written in a storytelling style (even with spelling or grammar mistakes).
+                    
+                    Use {"is_story":"false"} only if the input is clearly
+                    - A question, command, unrelated chat, or meta-commentary.
+                    
                     Always use double quotes, no other text.
                 """).strip(),
             },
@@ -109,13 +134,28 @@ class ChatWorker(QObject):
         if is_story:
             # fixed_line 구하기
             print("[AI] is_story: True -> result: correction, story_continue")
+            # fix_prompt = [
+            #     {
+            #         "role": "system",
+            #         "content": textwrap.dedent("""
+            #             Correct the grammar/spelling of the following sentence minimally,
+            #             but keep the child's voice.
+            #             Respond with ONLY the corrected sentence, nothing else.
+            #         """).strip(),
+            #     },
+            #     {"role": "user", "content": user_text},
+            # ]
+
             fix_prompt = [
                 {
                     "role": "system",
                     "content": textwrap.dedent("""
-                        Correct the grammar/spelling of the following sentence minimally,
-                        but keep the child's voice.
-                        Respond with ONLY the corrected sentence, nothing else.
+                        You are correcting sentences from a CHILD'S STORY.
+                        Correct ONLY clear grammar or spelling mistakes.
+                        Do NOT rephrase, add new words, or change the meaning.
+                        Do NOT add missing articles or polish the style unless absolutely required for correctness.
+                        Always preserve the child's simple voice and storytelling tone.
+                        Respond with ONLY the minimally corrected sentence, nothing else.
                     """).strip(),
                 },
                 {"role": "user", "content": user_text},
