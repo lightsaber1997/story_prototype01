@@ -15,6 +15,8 @@ llm:
   chat_response_streaming:
     enabled: true
   
+  classify_chat_ai: "false"
+  
 img_to_text:
   engine: "clip"
 

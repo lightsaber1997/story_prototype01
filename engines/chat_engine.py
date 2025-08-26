@@ -5,6 +5,8 @@ from typing import List
 # ── Qt
 from PySide6.QtCore import QThread, QObject, Signal, Slot
 import format_helper
+from config.config_loader import load_config
+
 
 # ════════════════════════════════════════════════════════════════════
 # ChatWorker (runs in background thread)
@@ -22,6 +24,8 @@ class ChatWorker(QObject):
 
     def __init__(self, engine):
         super().__init__()
+
+        self.config = load_config()
         self.engine = engine
         self.story: List[str] = []
         self.is_image = True
@@ -88,43 +92,59 @@ class ChatWorker(QObject):
         # ]
 
 
-        classify_prompt = [
-            {
-                "role": "system",
-                "content": textwrap.dedent("""
-                    You are an assistant in a children's story app.
-                    Classify the new input as part of the story or not based on story so far.
-                    
-                    Treat the input as {"is_story":"true"} if it:
-                    - Continues the narrative, OR
-                    - Adds new characters, places, or events, even if loosely related, OR
-                    - Is written in a storytelling style (even with spelling or grammar mistakes).
-                    
-                    Use {"is_story":"false"} only if the input is clearly
-                    - A question, command, unrelated chat, or meta-commentary.
-                    
-                    Always use double quotes, no other text.
-                """).strip(),
-            },
-            {
-                "role": "user",
-                "content": f"Story so far:\n{story_context}\n\nNew input:\n{user_text}",
-            },
-        ]
-
-
         is_story = False
-        try:
-            generated = self.engine.generate_reply(classify_prompt)
-            print(f"[DEBUG] is_story generated={generated}")
-            # Use robust fixer instead of raw json.loads
-            result = format_helper.single_key_bool_json_fix(generated, field="is_story")
+        if self.config["llm"]["classify_chat_ai"] == "true":
+            classify_prompt = [
+                {
+                    "role": "system",
+                    "content": textwrap.dedent("""
+                        You are an assistant in a children's story app.
+                        Classify the new input as part of the story or not based on story so far.
+                        
+                        Treat the input as {"is_story":"true"} if it:
+                        - Continues the narrative, OR
+                        - Adds new characters, places, or events, even if loosely related, OR
+                        - Is written in a storytelling style (even with spelling or grammar mistakes).
+                        
+                        Use {"is_story":"false"} only if the input is clearly
+                        - A question, command, unrelated chat, or meta-commentary.
+                        
+                        Always use double quotes, no other text.
+                    """).strip(),
+                },
+                {
+                    "role": "user",
+                    "content": f"Story so far:\n{story_context}\n\nNew input:\n{user_text}",
+                },
+            ]
 
-            if result.get("is_story") == "true":
+
+            
+            try:
+                generated = self.engine.generate_reply(classify_prompt)
+                print(f"[DEBUG] is_story generated={generated}")
+                # Use robust fixer instead of raw json.loads
+                result = format_helper.single_key_bool_json_fix(generated, field="is_story")
+
+                if result.get("is_story") == "true":
+                    is_story = True
+
+            except Exception as e:
+                print("is_story response error:", e)
+
+        else:
+            try:
+
+                raw_input = user_text  # preserve exactly as typed
+                if raw_input.rstrip().endswith("?"):
+                    is_story = False
+                else:
+                    is_story = True
+            except Exception as e:
                 is_story = True
+                print("is_story error:", e)
 
-        except Exception as e:
-            print("is_story response error:", e)
+
 
 
         
