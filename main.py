@@ -185,22 +185,15 @@ class MainApp(QWidget):
     def onStorySaved(self):
         """스토리 저장 처리"""
         QMessageBox.information(self, "저장 완료", "스토리북이 성공적으로 저장되었습니다!")
+        
+    def handleImageInput(self, file_path: str):
+        """이미지 업로드 입력 처리 (OCR → 스토리 반영)"""
+        if not file_path or not os.path.exists(file_path):
+            QMessageBox.warning(self, "파일 오류", "이미지 파일이 존재하지 않습니다.")
+            return
 
-    # def handleImageInput(self, file_path: str):
-    #     """이미지 업로드 입력 처리 (OCR 목업)"""
-    #     # TODO: 나중에 AI 붙이면 여기서 호출
-    #     # ai.convert_text(file_path)
-    #     # 사용자 채팅창에 표시하지 않음
-    #     image_ocr_text = f"Once upon a time, there was a converted text from {os.path.basename(file_path)}"
-
-    #     # 실제 AI 호출처럼 operate 이벤트 발생
-
-    #     if hasattr(self, 'chat_controller'):
-    #         # OCR 입력임을 알려주는 메타 정보 포함
-    #         self.chat_controller.operate.emit(json.dumps({
-    #             "source": "ocr",
-    #             "text": image_ocr_text
-    #         }))
+        print(f"[Image Input] 업로드된 파일: {file_path}")
+        self.img_to_text_controller.operate.emit(file_path)
 
     def _on_img_to_text_ready(self, payload: dict):
         if payload["type"] == "img2text":
