@@ -35,7 +35,8 @@ Unlike cloud-based AI services, this app performs all AI computations on the dev
 
 4. Complete stories can be saved as storybooks.
 
-<img width="969" height="557" src="https://github.com/user-attachments/assets/6958a1a9-b0d6-4d87-b58b-560b83f50660" />
+
+<img width="965" height="554" src="https://github.com/user-attachments/assets/6a584e59-9fd9-4896-a27c-7efb98400348" />
 <img width="969" height="557" src="https://github.com/user-attachments/assets/b8f8fa5a-625b-4576-8e65-2230223ff9a7" />
 
 ---
