@@ -1,162 +1,69 @@
 # tts/tts_worker.py
-import sys
-import pyttsx3
+import time
+import wave
+from pathlib import Path
 from PySide6.QtCore import QObject, Signal, Slot
+from piper import PiperVoice
+from config.config_loader import load_config
+import os
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PySide6.QtCore import QUrl
+
+
 
 class TTSWorker(QObject):
-    # Signals for playback events
-    started = Signal()     # Emitted when playback starts
-    finished = Signal()    # Emitted when playback finishes
-    error = Signal(str)    # Emitted when an error occurs
+    # Signals for status updates
+    started = Signal()
+    finished = Signal()
+    error = Signal(str)
+    synthesized = Signal(str)
 
-    _engine = None
-
-    @classmethod
-    def get_engine(cls):
-        """Return a singleton pyttsx3 engine instance"""
-        if cls._engine is None:
-            cls._engine = pyttsx3.init()
-        return cls._engine
-    
-    def __init__(self):
+    def __init__(self, root_path):
         super().__init__()
-        self.engine = None
-        self._stopped = True
-        self._loop_active = False
+
+        self.config = load_config()
+        self._voice = None
+        model_path = os.path.join(root_path, self.config["tts"]["option"]["voice_path"])
+        self._voice = PiperVoice.load(model_path)
+        self._root_path = root_path
+        
+    
+        self._stop_requested = False
 
     @Slot(str, object, int)
-    def play(self, text: str, voice_id=None, rate: int = 160):
-        """Play text-to-speech with given parameters"""
+    def play(self, text: str, voice_id: str | None, rate: int):
+        """Generate TTS audio from text and save to file"""
         try:
-            self._stopped = False
-            self.engine = self.get_engine()
-            self.engine.setProperty("rate", rate)
-            if voice_id:
-                self.engine.setProperty("voice", voice_id)
-
-            if not text.strip():
-                self.finished.emit()
-                return
-
-            # Emit started signal when playback begins
             self.started.emit()
+            self._stop_requested = False
 
-            self.engine.say(text)
+            # Load Piper voice model (you can make this configurable)
+            # If `voice_id` is provided by the controller, map it to a model file
+            
+            print(f"[DEBUG] tts text {text}")
+            
 
-            if sys.platform == "darwin":
-                # On macOS use runAndWait (blocking)
-                self.engine.runAndWait()
-            else:
-                # On Windows/Linux manage loop manually
-                self.engine.startLoop(False)
-                self._loop_active = True
-                while not self._stopped and self.engine.isBusy():
-                    self.engine.iterate()
-                if self._loop_active:
-                    self.engine.endLoop()
-                    self._loop_active = False
+            # Always overwrite to a fixed file or make dynamic filenames
+            out_file = os.path.join(self._root_path, "data/output.wav")
+            os.makedirs(os.path.dirname(out_file), exist_ok=True)
 
-            self.finished.emit()
+            start = time.time()
+            with wave.open(out_file, "wb") as wav_file:
+                self._voice.synthesize_wav(text, wav_file)
+
+            end = time.time()
+            print(f"[TTS] Synthesis took {end - start:.2f} seconds -> {out_file}")
+
+            self.synthesized.emit(out_file)
 
         except Exception as e:
-            try:
-                if self._loop_active:
-                    self.engine.endLoop()
-                    self._loop_active = False
-            except Exception:
-                pass
             self.error.emit(str(e))
+        finally:
+            self.finished.emit()
 
     @Slot()
     def stop(self):
-        """Stop playback immediately if active"""
-        self._stopped = True
-        if self.engine:
-            try:
-                self.engine.stop()
-                if self._loop_active:
-                    self.engine.endLoop()
-                    self._loop_active = False
-            except Exception:
-                pass
-# tts/tts_worker.py
-import sys
-import pyttsx3
-from PySide6.QtCore import QObject, Signal, Slot
-
-class TTSWorker(QObject):
-    # Signals for playback events
-    started = Signal()     # Emitted when playback starts
-    finished = Signal()    # Emitted when playback finishes
-    error = Signal(str)    # Emitted when an error occurs
-
-    _engine = None
-
-    @classmethod
-    def get_engine(cls):
-        """Return a singleton pyttsx3 engine instance"""
-        if cls._engine is None:
-            cls._engine = pyttsx3.init()
-        return cls._engine
-    
-    def __init__(self):
-        super().__init__()
-        self.engine = None
-        self._stopped = True
-        self._loop_active = False
-
-    @Slot(str, object, int)
-    def play(self, text: str, voice_id=None, rate: int = 160):
-        """Play text-to-speech with given parameters"""
-        try:
-            self._stopped = False
-            self.engine = self.get_engine()
-            self.engine.setProperty("rate", rate)
-            if voice_id:
-                self.engine.setProperty("voice", voice_id)
-
-            if not text.strip():
-                self.finished.emit()
-                return
-
-            # Emit started signal when playback begins
-            self.started.emit()
-
-            self.engine.say(text)
-
-            if sys.platform == "darwin":
-                # On macOS use runAndWait (blocking)
-                self.engine.runAndWait()
-            else:
-                # On Windows/Linux manage loop manually
-                self.engine.startLoop(False)
-                self._loop_active = True
-                while not self._stopped and self.engine.isBusy():
-                    self.engine.iterate()
-                if self._loop_active:
-                    self.engine.endLoop()
-                    self._loop_active = False
-
-            self.finished.emit()
-
-        except Exception as e:
-            try:
-                if self._loop_active:
-                    self.engine.endLoop()
-                    self._loop_active = False
-            except Exception:
-                pass
-            self.error.emit(str(e))
-
-    @Slot()
-    def stop(self):
-        """Stop playback immediately if active"""
-        self._stopped = True
-        if self.engine:
-            try:
-                self.engine.stop()
-                if self._loop_active:
-                    self.engine.endLoop()
-                    self._loop_active = False
-            except Exception:
-                pass
+        """Request stop (currently only cooperative)"""
+        self._stop_requested = True
+        # Piper doesn’t support mid-synthesis stopping easily,
+        # but you can check this flag in a streaming setup.

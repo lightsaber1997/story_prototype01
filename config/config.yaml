@@ -25,3 +25,7 @@ img_to_text:
     text_encoder_path: "data/clip_onnx/text_encoder.onnx"
     text_features_norm: "data/text_features_cache.npy" # should be already normalized
     text_features_labels: "data/text_features_labels.txt" # txt file
+
+tts:
+  option:
+    voice_path: "data/tts_piper/en_US-bryce-medium.onnx"

@@ -171,6 +171,7 @@ class ChatWorker(QObject):
                     "role": "system",
                     "content": textwrap.dedent("""
                         You are correcting sentences from a CHILD'S STORY.
+                        If user input is correct do not modify it.
                         Correct ONLY clear grammar or spelling mistakes.
                         Do NOT rephrase, add new words, or change the meaning.
                         Do NOT add missing articles or polish the style unless absolutely required for correctness.

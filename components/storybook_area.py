@@ -13,13 +13,21 @@ from tts.tts_controller import TTSController
 from utils.export_pdf import export_storybook
 from datetime import datetime
 
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PySide6.QtCore import QUrl
+import traceback
+
+
+
+
 class StorybookArea(QFrame):
     # 시그널 정의
     pageChanged = Signal(int)  # 페이지 변경 시그널
     storySaved = Signal()      # 스토리 저장 시그널
     
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, root_path):
+        super().__init__()
+        self._root_path = root_path
         self.current_page = 0
         self.total_pages = 1
         # Typewriter
@@ -31,7 +39,14 @@ class StorybookArea(QFrame):
         # TTS
         self.tts_rate = 160
         self.tts_mode = VoiceType.AMERICAN_WOMAN
-        self.tts_controller = TTSController(self)
+        self.tts_controller = TTSController(self._root_path)
+
+        # Audio player in UI thread
+        self.media_player = QMediaPlayer(self)
+        self.audio_output = QAudioOutput(self)
+        self.media_player.setAudioOutput(self.audio_output)
+        self.audio_output.setVolume(1.0)  # make sure it isn't muted
+
 
         self.setupUI()
         self.connectSignals()
@@ -517,13 +532,42 @@ class StorybookArea(QFrame):
         self.btnPrevPage.clicked.connect(self.previousPage)
         self.btnNextPage.clicked.connect(self.nextPage)
         self.btnReadAloud.clicked.connect(self.readAloud)
-        self.tts_controller.worker.started.connect(self._onTTSStarted)
-        self.tts_controller.worker.finished.connect(self._onTTSFinished)
-        self.tts_controller.worker.error.connect(self._onTTSError)
         self.btnExportPDF.clicked.connect(self.saveAllPagesAsPDF)
 
 
+        # Worker lifecycle
+        self.tts_controller.worker.started.connect(self._onTTSStarted)         # synth start
+        self.tts_controller.worker.synthesized.connect(self._onTTSSynthesized) # wav ready
+        self.tts_controller.worker.finished.connect(self._onTTSFinished)       # synth done
+        self.tts_controller.worker.error.connect(self._onTTSError)
 
+        # Playback state -> fix icon at real end-of-media
+        self.media_player.playbackStateChanged.connect(self._onPlaybackStateChanged)
+        self.media_player.mediaStatusChanged.connect(self._onMediaStatusChanged)
+        self.media_player.errorOccurred.connect(self._onMediaError)
+
+    def _onTTSSynthesized(self, wav_path: str):
+        # Start playback now that the file exists
+        self.media_player.setSource(QUrl.fromLocalFile(wav_path))
+        self._setReadAloudStopIcon()   # we’re about to play; button should show "stop"
+        self.media_player.play()
+
+    def _onPlaybackStateChanged(self, state):
+        from PySide6.QtMultimedia import QMediaPlayer
+        if state == QMediaPlayer.PlaybackState.StoppedState:
+            # Stopped because user pressed stop OR media finished
+            self._setReadAloudIdleIcon()
+
+    def _onMediaStatusChanged(self, status):
+        from PySide6.QtMultimedia import QMediaPlayer
+        if status == QMediaPlayer.MediaStatus.EndOfMedia:
+            self._setReadAloudIdleIcon()
+
+    def _onMediaError(self, error):
+        print(f"[TTS Playback] media error: {error}, {self.media_player.errorString()}")
+        self._setReadAloudIdleIcon()
+
+        
 
     def setPageCount(self, total_pages: int):
         """총 페이지 수 설정"""
@@ -612,6 +656,8 @@ class StorybookArea(QFrame):
         """이미지 지우기"""
         self.imageArea.clear()
         self.imageArea.setText("")
+        print(f"[DEBUG] clearImage called from {traceback.format_stack()}")
+
     
     def previousPage(self):
         """이전 페이지로 이동"""

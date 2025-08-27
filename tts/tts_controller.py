@@ -7,11 +7,11 @@ class TTSController(QObject):
     playRequested = Signal(str, object, int)
     stopRequested = Signal()
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, root_path):
+        super().__init__()
         # Create a dedicated worker thread
-        self.thread = QThread(parent)
-        self.worker = TTSWorker()
+        self.thread = QThread()
+        self.worker = TTSWorker(root_path)
         self.worker.moveToThread(self.thread)
         self.thread.start()
 

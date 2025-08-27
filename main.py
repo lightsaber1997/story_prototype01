@@ -22,6 +22,8 @@ from engines.stable_engine import StableV15Engine
 from engines.q_stable_engine import QStableV21Engine
 from engines.image_gen_engine import *
 from engines.img_to_text_engine import *
+from tts.tts_controller import TTSController
+
 
 class MainApp(QWidget):
     def __init__(self, parent=None):
@@ -49,7 +51,9 @@ class MainApp(QWidget):
 
         self.navigationBar = NavigationBar()
         self.chatArea = ChatArea()
-        self.storybookArea = StorybookArea()
+
+        root_path = os.path.dirname(__file__)
+        self.storybookArea = StorybookArea(root_path)
 
         layout.addWidget(self.navigationBar, 1)
         layout.addWidget(self.chatArea, 3)
@@ -261,7 +265,11 @@ class MainApp(QWidget):
             page_idx = payload["page_idx"]
 
             # 이미지 저장
-            save_path = f"images/page_{page_idx + 1}.png"
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            images_dir = os.path.join(base_dir, "images")  
+            os.makedirs(images_dir, exist_ok=True)
+
+            save_path = os.path.join(images_dir, f"page_{page_idx + 1}.png")
             QStableV21Engine.save_image(image, save_path)
             self.page_images[page_idx] = save_path
 
@@ -296,10 +304,13 @@ class MainApp(QWidget):
         self.storybookArea.setStoryText(story_text, page=self.current_page_idx, animated=True)
 
         # 이미지 동기화
-        if self.current_page_idx in self.page_images:
-            self.storybookArea.setStoryImage(self.page_images[self.current_page_idx])
-        else:
-            self.storybookArea.clearImage()
+        page_idx = self.current_page_idx
+        if page_idx in self.page_images:
+            path = self.page_images[page_idx]
+            # Only (re)draw if it's different from what’s shown
+            shown = getattr(self.storybookArea, "_current_image_path", None)
+            if shown != path:
+                self.storybookArea.setStoryImage(path)
 
     def _add_to_story_pages_list(self, segment: str, num_page_segment: int = 4) -> bool:
         """스토리 세그먼트를 페이지별로 관리"""
