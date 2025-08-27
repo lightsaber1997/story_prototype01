@@ -117,7 +117,7 @@ Detailed license conditions for each package and model can be found in the LICEN
 - PySide6 v6.9.1: LGPL‑3.0‑only or GPL‑3.0‑only 
   ※ LGPL conditions must be met for commercial distribution.
 - pyttsx3 v2.99: MPL‑2.0
-
+- qai-hub-models[llama-v3.2-3B-Instruct]
 #### Pre-trained Models
 
 - Phi‑3‑mini‑128k‑instruct: MIT License
