@@ -25,18 +25,25 @@ Unlike cloud-based AI services, this app performs all AI computations on the dev
 ## How to Use the Application
 > server repository - https://github.com/lightsaber1997/chat_server_share
 1. Follow the instructions in the Readme.md of the server repository to run the C++-based local server on port 8080. 
-2. Download and place the CLIP, Stable Diffusion v2.1, and piper-voices models under the data/ directory. 
+2. Download and place the CLIP, Stable Diffusion v2.1, and piper-voices models under the data/ directory. <img width="596" height="902" alt="image" src="https://github.com/user-attachments/assets/c330a111-56bf-454c-9467-dd185d83b5b8" />
+
 3. Set up a virtual environment, install the required packages listed in requirements.txt, and run main.py. 
 4. Launch the app. Once you attach an image and start, the user begins the story. 
 5. The AI corrects grammatical errors in the user’s input and continues the story naturally. It also generates and displays illustrations based on the story. 
   - Text Generation: Llama-v3.2-3B-Instruct (running on the server)
   - Image Generation: Stable Diffusion v2.1
   - Image-to-Text: CLIP
-6Users can review the AI-generated story content and illustrations, then input the next sentence to continue.
+6. Users can review the AI-generated story content and illustrations, then input the next sentence to continue.
 7. The completed storybook can be exported as a PDF.
 
 <img width="965" height="554" src="https://github.com/user-attachments/assets/6a584e59-9fd9-4896-a27c-7efb98400348" />
 <img width="969" height="557" src="https://github.com/user-attachments/assets/b8f8fa5a-625b-4576-8e65-2230223ff9a7" />
+
+---
+
+## Performance
+- Prompt Processing Time: 118073 us, Prompt Processing Rate : 855.432007 toks/sec
+- Token Generation Time: 1312576 us, Token Generation Rate: 6.094885 toks/sec
 
 ---
 
