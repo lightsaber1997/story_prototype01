@@ -37,6 +37,7 @@ Unlike cloud-based AI services, this app performs all AI computations on the dev
 
 ![Screenshot 1](https://github.com/user-attachments/assets/3e913448-6c8f-4e87-ada2-45584f557534)
 ![Screenshot 2](https://github.com/user-attachments/assets/ce3fdcfe-8431-42cd-8d21-9c8238514f46)
+<img width="969" height="557" alt="스크린샷 2025-08-27 오전 9 21 19" src="https://github.com/user-attachments/assets/b8f8fa5a-625b-4576-8e65-2230223ff9a7" />
 
 ---
 
