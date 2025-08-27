@@ -23,6 +23,7 @@ Unlike cloud-based AI services, this app performs all AI computations on the dev
 ---
 
 ## How to Use the Application
+> server repository - https://github.com/lightsaber1997/chat_server_share
 
 1. Users input story opening sentences in English through the chat interface.
    - Example: `There was prince` (example sentence with grammatical errors)
@@ -67,6 +68,7 @@ accelerate        : 1.9.0
 PySide6 binding   : 6.9.1
 Qt runtime        : 6.9.1
 diffusers
+
 ```
 
 ### Terminal Execution Method
@@ -117,7 +119,7 @@ Detailed license conditions for each package and model can be found in the LICEN
 - PySide6 v6.9.1: LGPL‑3.0‑only or GPL‑3.0‑only 
   ※ LGPL conditions must be met for commercial distribution.
 - pyttsx3 v2.99: MPL‑2.0
-- qai-hub-models[llama-v3.2-3B-Instruct]
+
 #### Pre-trained Models
 
 - Phi‑3‑mini‑128k‑instruct: MIT License
