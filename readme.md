@@ -124,21 +124,21 @@ Additionally, this project uses the following third-party open source components
 Detailed license conditions for each package and model can be found in the LICENSE file or Hugging Face Model Cards.
 
 #### Runtime and Libraries
-| Package                                                | Version/Range   | License                        |
-|--------------------------------------------------------|-----------------|--------------------------------|
-| onnxruntime-qnn                                        | 1.22.0          | MIT                            |
-| qai_hub_models[stable-diffusion-v2-1-quantized]        | 0.29            | Apache License 2.0             |
-| piper-tts                                              | 1.3.0           | MIT                            |
-| torch                                                  | 2.4.1           | BSD-3-Clause                   |
-| numpy                                                  | >=1.23          | BSD-3-Clause                   |
-| Pillow                                                 | >=9.0           | HPND (similar to BSD)          |
-| transformers                                           | >=4.30          | Apache License 2.0             |
-| diffusers                                              | >=0.20          | Apache License 2.0             |
-| accelerate                                             | >=0.20          | Apache License 2.0             |
-| openai                                                 | latest          | Apache License 2.0             |
-| PySide6                                                | 6.9.1           | LGPL v3 (with Qt exceptions)   |
-| python-dotenv                                          | latest          | BSD-3-Clause                   |
-| pyttsx3                                                | 2.99            | BSD                            |
+| Package                                         | Version/Range   | License                        |
+|-------------------------------------------------|-----------------|--------------------------------|
+| onnxruntime-qnn                                 | 1.22.0          | MIT                            |
+| qai_hub_models[stable-diffusion-v2-1-quantized] | 0.29            | Apache License 2.0             |
+| piper-tts                                       | 1.3.0           | MIT                            |
+| torch                                           | 2.4.1           | BSD-3-Clause                   |
+| numpy                                           | >=1.23          | BSD-3-Clause                   |
+| Pillow                                          | >=9.0           | HPND (similar to BSD)          |
+| transformers                                    | >=4.30          | Apache License 2.0             |
+| diffusers                                       | >=0.20          | Apache License 2.0             |
+| accelerate                                      | >=0.20          | Apache License 2.0             |
+| openai (used for debugging)                     | latest          | Apache License 2.0             |
+| PySide6                                         | 6.9.1           | LGPL v3 (with Qt exceptions)   |
+| python-dotenv                                   | latest          | BSD-3-Clause                   |
+| pyttsx3                                         | 2.99            | BSD                            |
 
 #### Pre-trained Models
 | Component        | Model / Library                   | License            |
