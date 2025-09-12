@@ -1,5 +1,8 @@
 # MyStoryPal: Interactive English Storybook
 
+**Demo Video Link:**
+https://youtu.be/MR3iJbfohKI
+
 ## Application Description
 
 **MyStoryPal** is an **Edge AI-based children's English storybook creation application**. It is designed to enable children to learn English naturally and enjoyably through real-time conversations with AI while collaboratively creating English stories.
